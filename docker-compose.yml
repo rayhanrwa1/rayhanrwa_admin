@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  rayhanrwa-admin:
+    build: .
+    container_name: rayhanrwa_admin
+    restart: always
+    ports:
+      - "3001:80"
