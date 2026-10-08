@@ -102,8 +102,8 @@ export default function Lightroom() {
       setFormData({
         title: item.title || '',
         preset_name: item.preset_name || '',
-        before_image_url: item.photo_before || '',
-        after_image_url: item.photo_after || ''
+        photo_before: item.photo_before || '',
+        photo_after: item.photo_after || ''
       });
     } else {
       setEditingItem(null);

@@ -1,7 +1,5 @@
 import imageCompression from 'browser-image-compression';
-import axios from 'axios';
-
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+import api from './api';
 
 export const uploadFile = async (file, type = 'image') => {
   let fileToUpload = file;
@@ -29,11 +27,9 @@ export const uploadFile = async (file, type = 'image') => {
   const formData = new FormData();
   formData.append('file', fileToUpload);
 
-  const token = localStorage.getItem('admin_token');
-  const response = await axios.post(`${BASE_URL}/upload`, formData, {
+  const response = await api.post('/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
-      Authorization: `Bearer ${token}`
     }
   });
 

@@ -10,12 +10,10 @@ export default function AppleGallery() {
   const [editingItem, setEditingItem] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form State
   const [formData, setFormData] = useState({
-    title: '',
-    image_url: '',
-    location: '',
-    date_taken: ''
+    url: '',
+    type: '',
+    order_index: ''
   });
 
   const [uploading, setUploading] = useState(false);
@@ -49,8 +47,7 @@ export default function AppleGallery() {
       const res = await api.post('/upload', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      const url = res.data?.data?.url || res.data?.url;
-      setFormData((prev) => ({ ...prev, image_url: url }));
+      setFormData((prev) => ({ ...prev, url: resUrl }));
     } catch (error) {
       console.error('Upload failed', error);
       alert('Upload failed!');
@@ -93,14 +90,13 @@ export default function AppleGallery() {
     if (item) {
       setEditingItem(item);
       setFormData({
-        title: item.title || '',
-        image_url: item.url || item.image_url || '',
-        location: item.location || '',
-        date_taken: item.date_taken || ''
+        url: item.url || item.image_url || '',
+        type: item.type || '',
+        order_index: item.order_index || ''
       });
     } else {
       setEditingItem(null);
-      setFormData({ title: '', image_url: '', location: '', date_taken: '' });
+      setFormData({ url: '', type: '', order_index: '' });
     }
     setIsModalOpen(true);
   };
@@ -144,10 +140,10 @@ export default function AppleGallery() {
               </div>
               <div className="p-5 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className="font-bold text-gray-900 text-base line-clamp-1">{item.title || 'Untitled'}</h3>
+                  <h3 className="font-bold text-gray-900 text-base line-clamp-1">{item.type || 'No Type'}</h3>
                 </div>
-                {(item.location || item.date_taken) && (
-                   <p className="text-xs text-gray-500 mb-4">{item.location} {item.date_taken ? `• ${item.date_taken}` : ''}</p>
+                {(item.order_index !== undefined) && (
+                   <p className="text-xs text-gray-500 mb-4">Order Index: {item.order_index}</p>
                 )}
                 <div className="mt-auto flex justify-end gap-2 pt-3 border-t border-gray-100">
                   <button onClick={() => openModal(item)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
@@ -177,12 +173,12 @@ export default function AppleGallery() {
             <form onSubmit={handleSubmit} className="p-6">
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Image Photo</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Image / Media</label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors relative overflow-hidden group">
-                    {formData.image_url ? (
-                      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${formData.image_url})` }}>
+                    {formData.url ? (
+                      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${formData.url})` }}>
                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                           <span className="text-white text-sm font-medium">Change Image</span>
+                           <span className="text-white text-sm font-medium">Change Media</span>
                          </div>
                       </div>
                     ) : (
@@ -195,26 +191,21 @@ export default function AppleGallery() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                  <input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-black outline-none transition-all" placeholder="Sunset at Bali" />
-                </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                    <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                     <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-black outline-none transition-all" placeholder="Bali, Indonesia" />
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                     <input type="text" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-black outline-none transition-all" placeholder="enim magna" />
                    </div>
                    <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">Date Taken</label>
-                     <input type="date" value={formData.date_taken} onChange={(e) => setFormData({...formData, date_taken: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-black outline-none transition-all" />
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Order Index</label>
+                     <input type="number" value={formData.order_index} onChange={(e) => setFormData({...formData, order_index: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-black outline-none transition-all" />
                    </div>
                 </div>
               </div>
               
               <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                <button type="submit" disabled={isSaving || !formData.image_url} className="px-5 py-2.5 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button type="submit" disabled={isSaving || !formData.url} className="px-5 py-2.5 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                   {isSaving && <Loader2 size={16} className="animate-spin" />}
                   {editingItem ? 'Save Changes' : 'Upload Image'}
                 </button>

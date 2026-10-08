@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/login';
 import Dashboard from './pages/dashboard';
+import Visitors from './pages/visitors';
 import Projects from './pages/projects';
 import Profile from './pages/profile';
 import Journal from './pages/journal';
@@ -30,6 +31,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/visitors" element={<Visitors />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/journal" element={<Journal />} />

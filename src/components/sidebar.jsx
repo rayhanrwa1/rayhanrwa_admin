@@ -1,22 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import {
   SquaresFour, User, Article, MusicNotes, Code, ChartBar,
   Quotes, Certificate, Camera, Image, ShareNetwork, Link,
   PaintBrush, VideoCamera, SignOut, Key
 } from '@phosphor-icons/react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, ChevronLeft, ChevronRight, ChevronDown, Globe } from 'lucide-react';
+import logo from '../assets/logo.png';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, setIsOpen }) {
   const [user, setUser] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(localStorage.getItem('sidebar_collapsed') === 'true');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+
+  // State for collapsible groups
+  const [expandedGroups, setExpandedGroups] = useState({
+    'MAIN': true,
+    'ARCHIVE': true,
+    'JOURNEY & PROJECT': true,
+    'JOURNAL': true,
+    'HOME / INDEX': true,
+    'CONTACT & NAVIGATION': true,
+    'OTHERS': false
+  });
+
+  const toggleGroup = (title) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [title]: !prev[title]
+    }));
+  };
 
   useEffect(() => {
     const userData = localStorage.getItem('admin_user');
@@ -35,17 +55,20 @@ export default function Sidebar() {
     window.location.href = '/login';
   };
 
+  const toggleCollapse = () => {
+    const newVal = !isCollapsed;
+    setIsCollapsed(newVal);
+    localStorage.setItem('sidebar_collapsed', newVal);
+  };
+
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setMessage('');
 
     try {
-      const token = localStorage.getItem('admin_token');
-      await axios.put(`${BASE_URL}/users/${user?.id || 'me'}`, {
+      await api.put(`/users/${user?.id || 'me'}`, {
         password: newPassword // Adjust according to backend
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       setMessage('Password changed successfully');
       setTimeout(() => {
@@ -66,110 +89,169 @@ export default function Sidebar() {
     {
       title: 'MAIN',
       items: [
-        { name: 'Dashboard', path: '/dashboard', icon: <SquaresFour size={18} /> }
+        { name: 'Dashboard', path: '/dashboard', icon: <SquaresFour size={18} /> },
+        { name: 'Visitors', path: '/visitors', icon: <Globe size={18} /> }
       ]
     },
     {
-      title: 'PORTFOLIO',
+      title: 'ARCHIVE',
       items: [
-        { name: 'Projects', path: '/projects', icon: <PaintBrush size={18} /> },
-        { name: 'UI Projects', path: '/ui-projects', icon: <PaintBrush size={18} /> },
-        { name: 'Video Edits', path: '/video-edits', icon: <VideoCamera size={18} /> }
-      ]
-    },
-    {
-      title: 'CONTENT',
-      items: [
-        { name: 'Journal', path: '/journal', icon: <Article size={18} /> },
         { name: 'Archive Tracks', path: '/archive-tracks', icon: <MusicNotes size={18} /> },
         { name: 'Archive Quotes', path: '/archive-quotes', icon: <Quotes size={18} /> },
         { name: 'Lightroom Edits', path: '/lightroom', icon: <Camera size={18} /> },
-        { name: 'Apple Gallery', path: '/apple-gallery', icon: <Image size={18} /> }
+        { name: 'UI Projects', path: '/ui-projects', icon: <PaintBrush size={18} /> },
+        { name: 'Apple Gallery', path: '/apple-gallery', icon: <Image size={18} /> },
+        { name: 'Social Posts', path: '/social-posts', icon: <ShareNetwork size={18} /> },
+        { name: 'Video Edits', path: '/video-edits', icon: <VideoCamera size={18} /> },
+        { name: 'Winners', path: '/winners', icon: <User size={18} /> }
       ]
     },
     {
-      title: 'IDENTITY & OTHERS',
+      title: 'JOURNEY & PROJECT',
       items: [
         { name: 'Profile', path: '/profile', icon: <User size={18} /> },
-        { name: 'Core Stack', path: '/core-stack', icon: <Code size={18} /> },
         { name: 'Stats', path: '/stats', icon: <ChartBar size={18} /> },
-        { name: 'Certifications', path: '/certifications', icon: <Certificate size={18} /> },
+        { name: 'Projects', path: '/projects', icon: <PaintBrush size={18} /> }
+      ]
+    },
+    {
+      title: 'JOURNAL',
+      items: [
+        { name: 'Journal', path: '/journal', icon: <Article size={18} /> },
+        { name: 'Share BGs', path: '/share-backgrounds', icon: <Image size={18} /> }
+      ]
+    },
+    {
+      title: 'HOME / INDEX',
+      items: [
+        { name: 'Core Stack', path: '/core-stack', icon: <Code size={18} /> },
+        { name: 'Certifications', path: '/certifications', icon: <Certificate size={18} /> }
+      ]
+    },
+    {
+      title: 'CONTACT & NAVIGATION',
+      items: [
         { name: 'Socials', path: '/socials', icon: <ShareNetwork size={18} /> },
         { name: 'Nav Links', path: '/nav-links', icon: <Link size={18} /> }
       ]
     },
     {
-      title: 'EXTRA',
+      title: 'OTHERS',
       items: [
-        { name: 'Questions', path: '/questions', icon: <Quotes size={18} /> },
-        { name: 'Winners', path: '/winners', icon: <User size={18} /> },
-        { name: 'Social Posts', path: '/social-posts', icon: <ShareNetwork size={18} /> },
         { name: 'Magangku Items', path: '/magangku-items', icon: <Article size={18} /> },
         { name: 'Magangku Messages', path: '/magangku-messages', icon: <Article size={18} /> },
-        { name: 'Share BGs', path: '/share-backgrounds', icon: <Image size={18} /> }
+        { name: 'Questions', path: '/questions', icon: <Quotes size={18} /> }
       ]
     }
   ];
 
   return (
     <>
-      <aside className="w-64 bg-[#FAFAFA] border-r border-gray-200 flex flex-col h-screen sticky top-0 md:flex">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            {user?.photo_profile ? (
-              <img src={user.photo_profile} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                <User size={20} />
+      <aside className={`fixed inset-y-0 left-0 z-50 bg-[#FAFAFA] border-r border-gray-200 flex flex-col h-screen transform transition-all duration-300 ease-in-out md:sticky md:top-0 md:translate-x-0 shrink-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${isCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className={`p-6 border-b border-gray-100 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} relative`}>
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="shrink-0">
+              <img
+                src={logo}
+                alt="Logo"
+                className={`object-contain transition-all duration-300 ${isCollapsed ? 'w-8 h-8' : 'w-9 h-9'}`}
+              />
+            </div>
+            {!isCollapsed && (
+              <div className="leading-tight overflow-hidden transition-all duration-300">
+                <h3 className="text-[15px] font-extrabold tracking-tight text-gray-900 truncate">rayhanrwa.</h3>
               </div>
             )}
-            <div className="leading-tight overflow-hidden">
-              <h3 className="text-sm font-bold text-gray-900 truncate">{user?.name || 'Admin Dashboard'}</h3>
-              <p className="text-[11px] text-gray-500 truncate">{user?.email || 'Manage your portfolio'}</p>
-            </div>
           </div>
+          {!isCollapsed && (
+            <button
+              className="md:hidden text-gray-400 hover:text-gray-700 transition-colors shrink-0"
+              onClick={() => setIsOpen(false)}
+            >
+              <X size={20} />
+            </button>
+          )}
+
+          <button
+            onClick={toggleCollapse}
+            className={`hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 shadow-sm transition-transform z-10`}
+          >
+            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-4 pt-4">
-          {navGroups.map((group, idx) => (
-            <div key={idx} className="mb-6">
-              <p className="px-6 mb-2 text-[10px] font-bold text-gray-400 tracking-widest">{group.title}</p>
-              <div className="space-y-0.5">
-                {group.items.map((item, i) => (
-                  <NavLink
-                    key={i}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-6 py-2.5 text-[13px] font-medium transition-all ${isActive
-                        ? 'bg-gray-100 text-gray-900 border-l-4 border-gray-900'
-                        : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
-                      }`
-                    }
+        <div className="flex-1 overflow-y-auto pb-4 pt-4 overflow-x-hidden">
+          {navGroups.map((group, idx) => {
+            const isGroupExpanded = expandedGroups[group.title];
+            return (
+              <div key={idx} className="mb-4">
+                {!isCollapsed ? (
+                  <button
+                    onClick={() => toggleGroup(group.title)}
+                    className="w-full flex items-center justify-between px-6 mb-2 cursor-pointer group"
                   >
-                    {item.icon}
-                    <span>{item.name}</span>
-                  </NavLink>
-                ))}
+                    <p className="text-[10px] font-bold text-gray-400 tracking-widest whitespace-nowrap group-hover:text-gray-600 transition-colors">
+                      {group.title}
+                    </p>
+                    {isGroupExpanded ? (
+                      <ChevronDown size={14} className="text-gray-400 group-hover:text-gray-600" />
+                    ) : (
+                      <ChevronRight size={14} className="text-gray-400 group-hover:text-gray-600" />
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-full flex justify-center mb-2">
+                    <div className="h-px w-8 bg-gray-200"></div>
+                  </div>
+                )}
+
+                <div className={`space-y-0.5 overflow-hidden transition-all duration-200 ${isGroupExpanded || isCollapsed ? 'max-h-250 opacity-100' : 'max-h-0 opacity-0'}`}>
+                  {group.items.map((item, i) => (
+                    <NavLink
+                      key={i}
+                      to={item.path}
+                      title={isCollapsed ? item.name : ""}
+                      className={({ isActive }) =>
+                        `flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-6'} py-2.5 text-[13px] font-medium transition-all ${isActive
+                          ? 'bg-gray-100 text-gray-900 border-l-4 border-gray-900'
+                          : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
+                        }`
+                      }
+                    >
+                      <div className={isCollapsed ? 'flex items-center justify-center w-full' : ''}>
+                        {item.icon}
+                      </div>
+                      {!isCollapsed && <span className="whitespace-nowrap">{item.name}</span>}
+                    </NavLink>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="border-t border-gray-200 py-4">
-          <p className="px-6 mb-2 text-[10px] font-bold text-gray-400 tracking-widest">SETTINGS</p>
-          <button onClick={() => setIsPasswordModalOpen(true)} className="flex items-center gap-3 px-6 py-2.5 w-full text-gray-600 hover:bg-gray-50 border-l-4 border-transparent text-[13px] font-medium transition-colors">
-            <Key size={18} />
-            <span>Change password</span>
+        <div className="border-t border-gray-200 py-4 overflow-x-hidden">
+          {!isCollapsed && <p className="px-6 mb-2 text-[10px] font-bold text-gray-400 tracking-widest whitespace-nowrap">SETTINGS</p>}
+          <button title={isCollapsed ? "Change password" : ""} onClick={() => setIsPasswordModalOpen(true)} className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-6'} py-2.5 w-full text-gray-600 hover:bg-gray-50 border-l-4 border-transparent text-[13px] font-medium transition-colors`}>
+            <div className={isCollapsed ? 'flex items-center justify-center w-full' : ''}>
+              <Key size={18} />
+            </div>
+            {!isCollapsed && <span className="whitespace-nowrap">Change password</span>}
           </button>
           <button
+            title={isCollapsed ? "Logout" : ""}
             onClick={handleLogout}
-            className="flex items-center gap-3 px-6 py-2.5 w-full text-gray-600 hover:bg-gray-50 border-l-4 border-transparent text-[13px] font-medium transition-colors">
-            <SignOut size={18} />
-            <span>Logout</span>
+            className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-6'} py-2.5 w-full text-gray-600 hover:bg-gray-50 border-l-4 border-transparent text-[13px] font-medium transition-colors`}>
+            <div className={isCollapsed ? 'flex items-center justify-center w-full' : ''}>
+              <SignOut size={18} />
+            </div>
+            {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
           </button>
-          <div className="px-6 mt-4">
-            <p className="text-[10px] text-gray-400">Internal v1.0.0</p>
-          </div>
+          {!isCollapsed && (
+            <div className="px-6 mt-4">
+              <p className="text-[10px] text-gray-400 whitespace-nowrap">Internal v1.0.0</p>
+            </div>
+          )}
         </div>
       </aside>
 

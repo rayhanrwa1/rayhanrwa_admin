@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { uploadFile } from '../utils/upload';
 import Layout from '../components/layout';
-import { Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon } from 'lucide-react';
 
 export default function SocialPosts() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [imagePreview, setImagePreview] = useState('');
+  const [existingImage, setExistingImage] = useState('');
   const [formData, setFormData] = useState({
-  type: "",
-  nama: "",
-  username: "",
-  foto_profile: "",
-  kutipan: "",
-  kutipan_en: "",
-  tanggal: "",
-  link: ""
-});
+    type: "",
+    nama: "",
+    username: "",
+    foto_profile: "",
+    kutipan: "",
+    link: "",
+    verified: false,
+    order_index: ""
+  });
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +50,11 @@ export default function SocialPosts() {
   const handleInputChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
-      setFormData({ ...formData, [name]: files[0] });
+      const file = files[0];
+      setFormData({ ...formData, [name]: file });
+      if (file) {
+        setImagePreview(URL.createObjectURL(file));
+      }
     } else if (type === 'checkbox') {
       setFormData({ ...formData, [name]: checked });
     } else {
@@ -56,27 +63,26 @@ export default function SocialPosts() {
   };
 
   const openModal = (item = null) => {
+    setImagePreview('');
     if (item) {
       let editableData = { ...item };
-      
-      
-      
+      const currentFoto = item.foto_profile || item.photo || item.image || '';
+      setExistingImage(currentFoto);
       editableData.foto_profile = '';
-      
-      
       setFormData(editableData);
       setEditingId(item.id || item._id);
     } else {
+      setExistingImage('');
       setFormData({
-  type: "",
-  nama: "",
-  username: "",
-  foto_profile: "",
-  kutipan: "",
-  kutipan_en: "",
-  tanggal: "",
-  link: ""
-});
+        type: "",
+        nama: "",
+        username: "",
+        foto_profile: "",
+        kutipan: "",
+        link: "",
+        verified: false,
+        order_index: ""
+      });
       setEditingId(null);
     }
     setError('');
@@ -85,16 +91,18 @@ export default function SocialPosts() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setImagePreview('');
+    setExistingImage('');
     setFormData({
-  type: "",
-  nama: "",
-  username: "",
-  foto_profile: "",
-  kutipan: "",
-  kutipan_en: "",
-  tanggal: "",
-  link: ""
-});
+      type: "",
+      nama: "",
+      username: "",
+      foto_profile: "",
+      kutipan: "",
+      link: "",
+      verified: false,
+      order_index: ""
+    });
     setEditingId(null);
     setError('');
   };
@@ -106,26 +114,19 @@ export default function SocialPosts() {
 
     try {
       let processedData = { ...formData };
-      
-      
-      if (processedData.foto_profile && processedData.foto_profile instanceof File) {
-        const uploadForm = new FormData();
-        uploadForm.append('file', processedData.foto_profile);
-        const uploadRes = await api.post('/upload', uploadForm, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        processedData.foto_profile = uploadRes.data.url || uploadRes.data?.data?.url;
-      }
-      
 
-      
+      if (processedData.foto_profile && processedData.foto_profile instanceof File) {
+        processedData.foto_profile = await uploadFile(processedData.foto_profile);
+      } else if (existingImage) {
+        processedData.foto_profile = existingImage;
+      }
 
       if (editingId) {
         await api.put(`/social_posts/${editingId}`, processedData);
       } else {
         await api.post('/social_posts', processedData);
       }
-      
+
       closeModal();
       fetchItems();
     } catch (err) {
@@ -152,12 +153,12 @@ export default function SocialPosts() {
     <Layout>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">SocialPosts</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your socialposts data.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Social Posts</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your social posts data.</p>
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm"
+          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm cursor-pointer"
         >
           <Plus size={18} />
           <span className="hidden sm:inline">Add New</span>
@@ -172,7 +173,7 @@ export default function SocialPosts() {
         ) : items.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-gray-500">No data found.</p>
-            <button onClick={() => openModal()} className="mt-4 text-blue-600 font-medium hover:underline">
+            <button onClick={() => openModal()} className="mt-4 text-blue-600 font-medium hover:underline cursor-pointer">
               Create your first item
             </button>
           </div>
@@ -181,41 +182,58 @@ export default function SocialPosts() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase font-semibold text-gray-500">
+                  <th className="px-6 py-4 w-20">Avatar</th>
                   <th className="px-6 py-4">Details</th>
                   <th className="px-6 py-4 w-32 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {items.map((item) => (
-                  <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {item.title || item.name || item.nama || item.label || item.title_en || item.slug || item.mission_brief || item.quote_id || `Item ${item.id || item._id}`}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                        {item.desc || item.subtitle || item.category || item.email || item.url || ''}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-3">
-                        <button
-                          onClick={() => openModal(item)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id || item._id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item) => {
+                  const avatarUrl = item.foto_profile || item.photo || item.image;
+                  return (
+                    <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={item.nama || 'Avatar'}
+                            className="w-12 h-12 object-cover rounded-full border border-gray-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 shrink-0">
+                            <ImageIcon size={20} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {item.nama || item.username || `Post ${item.id || item._id}`}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
+                          {item.username ? `@${item.username}` : ''} {item.type ? `• Type: ${item.type}` : ''} {item.kutipan ? `• "${item.kutipan}"` : ''}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => openModal(item)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id || item._id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -227,7 +245,7 @@ export default function SocialPosts() {
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8 animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
               <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Item' : 'New Item'}</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 transition-colors">
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer">
                 <X size={24} />
               </button>
             </div>
@@ -238,9 +256,8 @@ export default function SocialPosts() {
                   {error}
                 </div>
               )}
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
                   <input
@@ -248,7 +265,7 @@ export default function SocialPosts() {
                     name="type"
                     value={formData.type || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
@@ -258,7 +275,7 @@ export default function SocialPosts() {
                     name="nama"
                     value={formData.nama || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 border rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
@@ -268,16 +285,32 @@ export default function SocialPosts() {
                     name="username"
                     value={formData.username || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 border rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Foto Profile {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Foto Profile</label>
+                  {(imagePreview || existingImage) && (
+                    <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
+                      <img
+                        src={imagePreview || existingImage}
+                        alt="Preview"
+                        className="w-16 h-16 object-cover rounded-full border border-gray-200 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">
+                          {imagePreview ? 'New Profile Photo Selected' : 'Current Profile Photo Loaded'}
+                        </p>
+                        <p className="text-[11px] text-gray-400">Pilih file baru di bawah jika ingin mengganti foto profile.</p>
+                      </div>
+                    </div>
+                  )}
                   <input
                     type="file"
                     name="foto_profile"
+                    accept="image/*"
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -287,28 +320,8 @@ export default function SocialPosts() {
                     value={formData.kutipan || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 border rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
                   ></textarea>
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Kutipan EN</label>
-                  <textarea
-                    name="kutipan_en"
-                    value={formData.kutipan_en || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal</label>
-                  <input
-                    type="text"
-                    name="tanggal"
-                    value={formData.tanggal || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Link</label>
@@ -317,23 +330,23 @@ export default function SocialPosts() {
                     name="link"
                     value={formData.link || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
               </div>
-              
+
               <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm"
+                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                   {editingId ? 'Save Changes' : 'Create'}

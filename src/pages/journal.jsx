@@ -1,411 +1,312 @@
-import React, { useState, useEffect } from 'react';
-import api from '../utils/api';
+import React, { useState, useEffect } from "react";
+import api from "../utils/api";
+import { Loader2, Plus, ArrowLeft, Save } from "lucide-react";
+import TipTapEditor from '../components/TipTapEditor';
 import Layout from '../components/layout';
-import { Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
 
 export default function Journal() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-  slug: "",
-  is_active: false,
-  title_en: "",
-  title_id: "",
-  date: "",
-  excerpt_en: "",
-  excerpt_id: "",
-  content_en: "",
-  content_id: "",
-  link: "",
-  authors: "",
-  publisher: "",
-  tags: ""
-});
-  const [editingId, setEditingId] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+    const [journal, setJournal] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+    const [currentItem, setCurrentItem] = useState(null);
+    const [formData, setFormData] = useState({
+        slug: "", is_active: true, title_en: "", title_id: "", date: "",
+        excerpt_en: "", excerpt_id: "", content_en: "", content_id: "",
+        link: "", authors: "", publisher: "", tags: ""
+    });
+    const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
+    useEffect(() => {
+        fetchJournal();
+    }, []);
 
-  const fetchItems = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/journal');
-      if (res.data && Array.isArray(res.data.data)) {
-        setItems(res.data.data);
-      } else if (Array.isArray(res.data)) {
-        setItems(res.data);
-      } else {
-        setItems([]);
-      }
-    } catch (error) {
-      console.error('Error fetching items', error);
-      setError('Failed to fetch data');
-    } finally {
-      setLoading(false);
+    const fetchJournal = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/journal');
+            const data = res.data?.data || res.data;
+            setJournal(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error("Error fetching journal:", error);
+            setJournal([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAdd = () => {
+        setFormData({
+            slug: "", is_active: true, title_en: "", title_id: "", date: "",
+            excerpt_en: "", excerpt_id: "", content_en: "", content_id: "",
+            link: "", authors: "", publisher: "", tags: ""
+        });
+        setCurrentItem(null);
+        setIsEditing(true);
+    };
+
+    const handleEdit = (item) => {
+        setFormData({
+            slug: item.slug || "",
+            is_active: item.is_active !== false,
+            title_en: item.title_en || "",
+            title_id: item.title_id || "",
+            date: item.date || "",
+            excerpt_en: item.excerpt_en || "",
+            excerpt_id: item.excerpt_id || "",
+            content_en: item.content_en || "",
+            content_id: item.content_id || "",
+            link: item.link || "",
+            authors: item.authors || "",
+            publisher: item.publisher || "",
+            tags: Array.isArray(item.tags) ? item.tags.join(", ") : (item.tags || "")
+        });
+        setCurrentItem(item);
+        setIsEditing(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to move this to trash?")) return;
+        try {
+            await api.delete(`/journal/${id}`);
+            fetchJournal();
+        } catch (error) {
+            alert("Error deleting: " + error.message);
+        }
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+
+        const tagsArray = typeof formData.tags === 'string' 
+            ? formData.tags.split(",").map(tag => tag.trim()).filter(tag => tag)
+            : formData.tags;
+
+        const dataToSave = {
+            slug: formData.slug,
+            is_active: formData.is_active,
+            title_en: formData.title_en,
+            title_id: formData.title_id,
+            date: formData.date,
+            excerpt_en: formData.excerpt_en,
+            excerpt_id: formData.excerpt_id,
+            content_en: formData.content_en,
+            content_id: formData.content_id,
+            link: formData.link,
+            authors: formData.authors,
+            publisher: formData.publisher,
+            tags: tagsArray
+        };
+
+        try {
+            if (currentItem) {
+                await api.put(`/journal/${currentItem.id || currentItem._id}`, dataToSave);
+            } else {
+                await api.post('/journal', dataToSave);
+            }
+            setIsEditing(false);
+            fetchJournal();
+        } catch (error) {
+            alert("Error saving: " + (error.response?.data?.message || error.message));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <Layout>
+                <div className="flex justify-center items-center h-64"><Loader2 className="w-8 h-8 animate-spin text-zinc-900" /></div>
+            </Layout>
+        );
     }
-  };
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
-    if (type === 'file') {
-      setFormData({ ...formData, [name]: files[0] });
-    } else if (type === 'checkbox') {
-      setFormData({ ...formData, [name]: checked });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const openModal = (item = null) => {
-    if (item) {
-      let editableData = { ...item };
-      
-      if (Array.isArray(editableData.tags)) {
-        editableData.tags = editableData.tags.join(', ');
-      }
-      
-      
-      
-      
-      setFormData(editableData);
-      setEditingId(item.id || item._id);
-    } else {
-      setFormData({
-  slug: "",
-  is_active: false,
-  title_en: "",
-  title_id: "",
-  date: "",
-  excerpt_en: "",
-  excerpt_id: "",
-  content_en: "",
-  content_id: "",
-  link: "",
-  authors: "",
-  publisher: "",
-  tags: ""
-});
-      setEditingId(null);
-    }
-    setError('');
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setFormData({
-  slug: "",
-  is_active: false,
-  title_en: "",
-  title_id: "",
-  date: "",
-  excerpt_en: "",
-  excerpt_id: "",
-  content_en: "",
-  content_id: "",
-  link: "",
-  authors: "",
-  publisher: "",
-  tags: ""
-});
-    setEditingId(null);
-    setError('');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-
-    try {
-      let processedData = { ...formData };
-      
-      
-
-      
-      if (typeof processedData.tags === 'string' && processedData.tags) {
-        processedData.tags = processedData.tags.split(',').map(s => s.trim()).filter(Boolean);
-      }
-      
-
-      if (editingId) {
-        await api.put(`/journal/${editingId}`, processedData);
-      } else {
-        await api.post('/journal', processedData);
-      }
-      
-      closeModal();
-      fetchItems();
-    } catch (err) {
-      console.error('Error submitting form', err);
-      setError(err.response?.data?.message || 'Failed to submit form');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await api.delete(`/journal/${id}`);
-        fetchItems();
-      } catch (err) {
-        console.error('Error deleting item', err);
-        alert('Failed to delete item');
-      }
-    }
-  };
-
-  return (
-    <Layout>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Journal</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your journal data.</p>
-        </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm"
-        >
-          <Plus size={18} />
-          <span className="hidden sm:inline">Add New</span>
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="p-12 flex justify-center items-center">
-            <Loader2 className="animate-spin text-gray-400" size={32} />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-gray-500">No data found.</p>
-            <button onClick={() => openModal()} className="mt-4 text-blue-600 font-medium hover:underline">
-              Create your first item
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase font-semibold text-gray-500">
-                  <th className="px-6 py-4">Details</th>
-                  <th className="px-6 py-4 w-32 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {items.map((item) => (
-                  <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {item.title || item.name || item.nama || item.label || item.title_en || item.slug || item.mission_brief || item.quote_id || `Item ${item.id || item._id}`}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                        {item.desc || item.subtitle || item.category || item.email || item.url || ''}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-3">
+    if (isEditing) {
+        return (
+            <Layout>
+                <div className="max-w-6xl">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setIsEditing(false)} className="p-2 border border-zinc-200 rounded-lg bg-white hover:bg-zinc-50 transition-colors cursor-pointer">
+                                <ArrowLeft className="w-4 h-4 text-zinc-600" />
+                            </button>
+                            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{currentItem ? "Edit Entry" : "Add New Entry"}</h1>
+                        </div>
                         <button
-                          onClick={() => openModal(item)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Edit"
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2 cursor-pointer"
                         >
-                          <Edit2 size={18} />
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {saving ? "Publishing..." : "Publish"}
                         </button>
-                        <button
-                          onClick={() => handleDelete(item.id || item._id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Item' : 'New Item'}</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 transition-colors">
-                <X size={24} />
-              </button>
+                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                        {/* Main Content Area */}
+                        <div className="xl:col-span-3 space-y-6">
+                            <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[13px] font-semibold text-zinc-700 mb-2">Title (English)</label>
+                                        <input type="text" required value={formData.title_en} onChange={e => setFormData({ ...formData, title_en: e.target.value })} className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[15px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium" placeholder="Enter title here" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-semibold text-zinc-700 mb-2">Title (Indonesian)</label>
+                                        <input type="text" required value={formData.title_id} onChange={e => setFormData({ ...formData, title_id: e.target.value })} className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-[15px] focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium" placeholder="Masukkan judul di sini" />
+                                    </div>
+                                    <div className="pt-4 border-t border-zinc-100" data-color-mode="light">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <label className="block text-[13px] font-semibold text-zinc-700">Content (English)</label>
+                                        </div>
+                                        <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white">
+                                            <TipTapEditor value={formData.content_en} onChange={val => {
+                                                setFormData({...formData, content_en: val || ''});
+                                            }} />
+                                        </div>
+                                    </div>
+                                    <div data-color-mode="light" className="mt-6">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <label className="block text-[13px] font-semibold text-zinc-700">Content (Indonesian)</label>
+                                        </div>
+                                        <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white">
+                                            <TipTapEditor value={formData.content_id} onChange={val => {
+                                                setFormData({...formData, content_id: val || ''});
+                                            }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                                <h2 className="text-[14px] font-semibold text-zinc-900 mb-4 border-b border-zinc-100 pb-2">Excerpts</h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-2">Excerpt (English)</label>
+                                        <textarea value={formData.excerpt_en} onChange={e => setFormData({ ...formData, excerpt_en: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-24" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-2">Excerpt (Indonesian)</label>
+                                        <textarea value={formData.excerpt_id} onChange={e => setFormData({ ...formData, excerpt_id: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-24" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sidebar / Meta Box Area */}
+                        <div className="space-y-6">
+                            <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm">
+                                <h2 className="text-[13px] font-semibold text-zinc-900 uppercase tracking-wider mb-4 border-b border-zinc-100 pb-2">Publish</h2>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-200 cursor-pointer" onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}>
+                                        <span className="text-[13px] font-medium text-zinc-700">Status</span>
+                                        <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
+                                            <input type="checkbox" className="sr-only peer" checked={formData.is_active} readOnly />
+                                            <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-1.5">Date</label>
+                                        <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="YYYY-MM-DD" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-1.5">Slug (URL)</label>
+                                        <input type="text" required value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="my-first-post" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm">
+                                <h2 className="text-[13px] font-semibold text-zinc-900 uppercase tracking-wider mb-4 border-b border-zinc-100 pb-2">Attributes</h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-1.5">Authors</label>
+                                        <input type="text" value={formData.authors} onChange={e => setFormData({ ...formData, authors: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-1.5">Publisher</label>
+                                        <input type="text" value={formData.publisher} onChange={e => setFormData({ ...formData, publisher: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-zinc-600 mb-1.5">External Link</label>
+                                        <input type="url" value={formData.link} onChange={e => setFormData({ ...formData, link: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="https://..." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm">
+                                <h2 className="text-[13px] font-semibold text-zinc-900 uppercase tracking-wider mb-4 border-b border-zinc-100 pb-2">Tags</h2>
+                                <input type="text" value={formData.tags} onChange={e => setFormData({ ...formData, tags: e.target.value })} className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Tech, Research" />
+                                <p className="text-[11px] text-zinc-500 mt-2">Separate tags with commas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    return (
+        <Layout>
+            <div>
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Journal Posts</h1>
+                    <button onClick={handleAdd} className="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer">
+                        <Plus className="w-4 h-4" /> Add New Post
+                    </button>
+                </div>
+
+                <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <div className="flex border-b border-zinc-200 px-4 py-3 bg-zinc-50/50 gap-4">
+                        <span className="text-[13px] font-medium text-zinc-900 border-b-2 border-zinc-900 pb-3 -mb-3">All ({journal.length})</span>
+                        <span className="text-[13px] font-medium text-blue-600 pb-3 -mb-3 cursor-pointer">Published ({journal.filter(j => j.is_active !== false).length})</span>
+                        <span className="text-[13px] font-medium text-zinc-500 pb-3 -mb-3 cursor-pointer">Drafts ({journal.filter(j => j.is_active === false).length})</span>
+                    </div>
+                    {journal.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-zinc-500">No journal posts found.</div>
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-zinc-200 text-[12px] text-zinc-500 font-semibold uppercase tracking-wider bg-white">
+                                    <th className="p-4">Title</th>
+                                    <th className="p-4 w-32">Status</th>
+                                    <th className="p-4 w-32">Date</th>
+                                    <th className="p-4 w-48">Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-100 text-[14px]">
+                                {journal.map((item) => (
+                                    <tr key={item.id || item._id} className="hover:bg-zinc-50/50 transition-colors group">
+                                        <td className="p-4 font-semibold text-zinc-900">
+                                            <div className="flex flex-col">
+                                                <span className="text-blue-600 cursor-pointer hover:underline" onClick={() => handleEdit(item)}>{item.title_en || 'Untitled'}</span>
+                                                <div className="flex gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[12px] font-normal">
+                                                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 cursor-pointer">Edit</button>
+                                                    <span className="text-zinc-300">|</span>
+                                                    <button onClick={() => handleDelete(item.id || item._id)} className="text-red-600 hover:text-red-800 cursor-pointer">Trash</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-4 align-top">
+                                            <span className={`px-2 py-1 text-[11px] rounded font-medium ${item.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-600'}`}>
+                                                {item.is_active !== false ? 'Published' : 'Draft'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-zinc-600 align-top text-[13px]">{item.date || '—'}</td>
+                                        <td className="p-4 align-top">
+                                            <div className="flex flex-wrap gap-1">
+                                                {Array.isArray(item.tags) && item.tags.map((tag, i) => (
+                                                    <span key={i} className="text-zinc-500 text-[13px]">{tag}{i < item.tags.length - 1 ? ',' : ''}</span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="p-6">
-              {error && (
-                <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">
-                  {error}
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Slug</label>
-                  <input
-                    type="text"
-                    name="slug"
-                    value={formData.slug || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div className="flex items-center space-x-3 py-2">
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    checked={formData.is_active || false}
-                    onChange={handleInputChange}
-                    className="w-5 h-5 rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <label className="text-sm font-medium text-gray-700">Is Active</label>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title EN</label>
-                  <input
-                    type="text"
-                    name="title_en"
-                    value={formData.title_en || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title ID</label>
-                  <input
-                    type="text"
-                    name="title_id"
-                    value={formData.title_id || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Date (YYYY-MM-DD)</label>
-                  <input
-                    type="text"
-                    name="date"
-                    value={formData.date || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Excerpt EN</label>
-                  <textarea
-                    name="excerpt_en"
-                    value={formData.excerpt_en || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Excerpt ID</label>
-                  <textarea
-                    name="excerpt_id"
-                    value={formData.excerpt_id || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Content EN</label>
-                  <textarea
-                    name="content_en"
-                    value={formData.content_en || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Content ID</label>
-                  <textarea
-                    name="content_id"
-                    value={formData.content_id || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Link</label>
-                  <input
-                    type="text"
-                    name="link"
-                    value={formData.link || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Authors</label>
-                  <input
-                    type="text"
-                    name="authors"
-                    value={formData.authors || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Publisher</label>
-                  <input
-                    type="text"
-                    name="publisher"
-                    value={formData.publisher || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    name="tags"
-                    value={formData.tags || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm"
-                >
-                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </Layout>
-  );
+        </Layout>
+    );
 }

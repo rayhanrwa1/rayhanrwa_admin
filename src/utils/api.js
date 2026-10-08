@@ -12,12 +12,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Global response interceptor:
+ * - 401 Unauthorized  → token expired / invalid → logout & redirect to /login
+ * - 403 Forbidden     → token valid but no permission → same treatment
+ */
+const handleAuthError = () => {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_user');
+  // Use replace so user can't press "Back" to a protected page
+  window.location.replace('/login');
+};
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('admin_token');
-      window.location.href = '/login';
+    if (error.response) {
+      const { status } = error.response;
+      if (status === 401 || status === 403) {
+        handleAuthError();
+      }
     }
     return Promise.reject(error);
   }

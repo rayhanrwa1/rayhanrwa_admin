@@ -237,7 +237,7 @@ export default function Questions() {
                     name="level"
                     value={formData.level || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -247,7 +247,7 @@ export default function Questions() {
                     value={formData.mission_brief || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -257,7 +257,7 @@ export default function Questions() {
                     value={formData.mission_brief_en || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -267,7 +267,7 @@ export default function Questions() {
                     value={formData.filesystem || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -277,7 +277,7 @@ export default function Questions() {
                     value={formData.hint || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -287,7 +287,7 @@ export default function Questions() {
                     value={formData.hint_en || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div>
@@ -297,7 +297,7 @@ export default function Questions() {
                     name="answer"
                     value={formData.answer || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
@@ -307,7 +307,7 @@ export default function Questions() {
                     name="answer_en"
                     value={formData.answer_en || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
               </div>

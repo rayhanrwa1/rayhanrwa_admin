@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { uploadFile } from '../utils/upload';
 import Layout from '../components/layout';
-import { Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon } from 'lucide-react';
 
 export default function Projects() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [imagePreview, setImagePreview] = useState('');
+  const [existingImage, setExistingImage] = useState('');
   const [formData, setFormData] = useState({
-  number: "",
-  category: "",
-  title: "",
-  desc: "",
-  desc_en: "",
-  desc_id: "",
-  tags: "",
-  image: "",
-  link: ""
-});
+    number: "",
+    category: "",
+    title: "",
+    desc: "",
+    desc_en: "",
+    desc_id: "",
+    tags: "",
+    image: "",
+    link: ""
+  });
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -48,7 +51,11 @@ export default function Projects() {
   const handleInputChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
-      setFormData({ ...formData, [name]: files[0] });
+      const file = files[0];
+      setFormData({ ...formData, [name]: file });
+      if (file) {
+        setImagePreview(URL.createObjectURL(file));
+      }
     } else if (type === 'checkbox') {
       setFormData({ ...formData, [name]: checked });
     } else {
@@ -57,32 +64,33 @@ export default function Projects() {
   };
 
   const openModal = (item = null) => {
+    setImagePreview('');
     if (item) {
       let editableData = { ...item };
-      
+
       if (Array.isArray(editableData.tags)) {
         editableData.tags = editableData.tags.join(', ');
       }
-      
-      
-      
+
+      const currentImg = item.image || item.image_url || item.url || '';
+      setExistingImage(currentImg);
       editableData.image = '';
-      
-      
+
       setFormData(editableData);
       setEditingId(item.id || item._id);
     } else {
+      setExistingImage('');
       setFormData({
-  number: "",
-  category: "",
-  title: "",
-  desc: "",
-  desc_en: "",
-  desc_id: "",
-  tags: "",
-  image: "",
-  link: ""
-});
+        number: "",
+        category: "",
+        title: "",
+        desc: "",
+        desc_en: "",
+        desc_id: "",
+        tags: "",
+        image: "",
+        link: ""
+      });
       setEditingId(null);
     }
     setError('');
@@ -91,17 +99,19 @@ export default function Projects() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setImagePreview('');
+    setExistingImage('');
     setFormData({
-  number: "",
-  category: "",
-  title: "",
-  desc: "",
-  desc_en: "",
-  desc_id: "",
-  tags: "",
-  image: "",
-  link: ""
-});
+      number: "",
+      category: "",
+      title: "",
+      desc: "",
+      desc_en: "",
+      desc_id: "",
+      tags: "",
+      image: "",
+      link: ""
+    });
     setEditingId(null);
     setError('');
   };
@@ -113,30 +123,23 @@ export default function Projects() {
 
     try {
       let processedData = { ...formData };
-      
-      
-      if (processedData.image && processedData.image instanceof File) {
-        const uploadForm = new FormData();
-        uploadForm.append('file', processedData.image);
-        const uploadRes = await api.post('/upload', uploadForm, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        processedData.image = uploadRes.data.url || uploadRes.data?.data?.url;
-      }
-      
 
-      
+      if (processedData.image && processedData.image instanceof File) {
+        processedData.image = await uploadFile(processedData.image);
+      } else if (existingImage) {
+        processedData.image = existingImage;
+      }
+
       if (typeof processedData.tags === 'string' && processedData.tags) {
         processedData.tags = processedData.tags.split(',').map(s => s.trim()).filter(Boolean);
       }
-      
 
       if (editingId) {
         await api.put(`/projects/${editingId}`, processedData);
       } else {
         await api.post('/projects', processedData);
       }
-      
+
       closeModal();
       fetchItems();
     } catch (err) {
@@ -168,7 +171,7 @@ export default function Projects() {
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm"
+          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm cursor-pointer"
         >
           <Plus size={18} />
           <span className="hidden sm:inline">Add New</span>
@@ -192,41 +195,58 @@ export default function Projects() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase font-semibold text-gray-500">
+                  <th className="px-6 py-4 w-20">Preview</th>
                   <th className="px-6 py-4">Details</th>
                   <th className="px-6 py-4 w-32 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {items.map((item) => (
-                  <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {item.title || item.name || item.nama || item.label || item.title_en || item.slug || item.mission_brief || item.quote_id || `Item ${item.id || item._id}`}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                        {item.desc || item.subtitle || item.category || item.email || item.url || ''}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-3">
-                        <button
-                          onClick={() => openModal(item)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id || item._id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item) => {
+                  const imgUrl = item.image || item.image_url || item.url;
+                  return (
+                    <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        {imgUrl ? (
+                          <img
+                            src={imgUrl}
+                            alt={item.title || 'Preview'}
+                            className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 shrink-0">
+                            <ImageIcon size={20} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {item.title || item.name || item.category || `Item ${item.id || item._id}`}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
+                          {item.desc || item.desc_id || item.desc_en || item.category || item.link || ''}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => openModal(item)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id || item._id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -249,9 +269,9 @@ export default function Projects() {
                   {error}
                 </div>
               )}
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Number</label>
                   <input
@@ -259,7 +279,7 @@ export default function Projects() {
                     name="number"
                     value={formData.number || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
@@ -269,28 +289,18 @@ export default function Projects() {
                     name="category"
                     value={formData.category || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 border rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
-                <div>
+                <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
                   <input
                     type="text"
                     name="title"
                     value={formData.title || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (ID)</label>
-                  <textarea
-                    name="desc"
-                    value={formData.desc || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (EN)</label>
@@ -299,17 +309,17 @@ export default function Projects() {
                     value={formData.desc_en || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (ID 2)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (ID)</label>
                   <textarea
                     name="desc_id"
                     value={formData.desc_id || ''}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
                   ></textarea>
                 </div>
                 <div>
@@ -319,16 +329,32 @@ export default function Projects() {
                     name="tags"
                     value={formData.tags || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Image {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Image</label>
+                  {(imagePreview || existingImage) && (
+                    <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
+                      <img
+                        src={imagePreview || existingImage}
+                        alt="Preview"
+                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">
+                          {imagePreview ? 'New Image Selected' : 'Current Loaded Image'}
+                        </p>
+                        <p className="text-[11px] text-gray-400">Pilih file baru di bawah jika ingin mengganti gambar.</p>
+                      </div>
+                    </div>
+                  )}
                   <input
                     type="file"
                     name="image"
+                    accept="image/*"
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
                   />
                 </div>
                 <div>
@@ -338,23 +364,23 @@ export default function Projects() {
                     name="link"
                     value={formData.link || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
               </div>
-              
+
               <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm"
+                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                   {editingId ? 'Save Changes' : 'Create'}

@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { uploadFile } from '../utils/upload';
 import Layout from '../components/layout';
-import { Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Loader2, Video as VideoIcon, Image as ImageIcon } from 'lucide-react';
 
 export default function VideoEdits() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [thumbPreview, setThumbPreview] = useState('');
+  const [existingThumb, setExistingThumb] = useState('');
+  const [existingVideo, setExistingVideo] = useState('');
   const [formData, setFormData] = useState({
-  title_en: "",
-  title_id: "",
-  video_url: "",
-  thumbnail_url: "",
-  duration: "",
-  order_index: ""
-});
+    title_en: "",
+    title_id: "",
+    video_url: "",
+    thumbnail_url: "",
+    duration: "",
+    order_index: ""
+  });
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -45,7 +49,11 @@ export default function VideoEdits() {
   const handleInputChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
-      setFormData({ ...formData, [name]: files[0] });
+      const file = files[0];
+      setFormData({ ...formData, [name]: file });
+      if (name === 'thumbnail_url' && file) {
+        setThumbPreview(URL.createObjectURL(file));
+      }
     } else if (type === 'checkbox') {
       setFormData({ ...formData, [name]: checked });
     } else {
@@ -54,27 +62,28 @@ export default function VideoEdits() {
   };
 
   const openModal = (item = null) => {
+    setThumbPreview('');
     if (item) {
       let editableData = { ...item };
-      
-      
-      
+      const currentThumb = item.thumbnail || item.thumbnail_url || item.image_url || item.image || '';
+      const currentVid = item.video_url || item.url || '';
+      setExistingThumb(currentThumb);
+      setExistingVideo(currentVid);
       editableData.video_url = '';
-      
       editableData.thumbnail_url = '';
-      
-      
       setFormData(editableData);
       setEditingId(item.id || item._id);
     } else {
+      setExistingThumb('');
+      setExistingVideo('');
       setFormData({
-  title_en: "",
-  title_id: "",
-  video_url: "",
-  thumbnail_url: "",
-  duration: "",
-  order_index: ""
-});
+        title_en: "",
+        title_id: "",
+        video_url: "",
+        thumbnail_url: "",
+        duration: "",
+        order_index: ""
+      });
       setEditingId(null);
     }
     setError('');
@@ -83,14 +92,17 @@ export default function VideoEdits() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setThumbPreview('');
+    setExistingThumb('');
+    setExistingVideo('');
     setFormData({
-  title_en: "",
-  title_id: "",
-  video_url: "",
-  thumbnail_url: "",
-  duration: "",
-  order_index: ""
-});
+      title_en: "",
+      title_id: "",
+      video_url: "",
+      thumbnail_url: "",
+      duration: "",
+      order_index: ""
+    });
     setEditingId(null);
     setError('');
   };
@@ -102,35 +114,25 @@ export default function VideoEdits() {
 
     try {
       let processedData = { ...formData };
-      
-      
-      if (processedData.video_url && processedData.video_url instanceof File) {
-        const uploadForm = new FormData();
-        uploadForm.append('file', processedData.video_url);
-        const uploadRes = await api.post('/upload', uploadForm, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        processedData.video_url = uploadRes.data.url || uploadRes.data?.data?.url;
-      }
-      
-      if (processedData.thumbnail_url && processedData.thumbnail_url instanceof File) {
-        const uploadForm = new FormData();
-        uploadForm.append('file', processedData.thumbnail_url);
-        const uploadRes = await api.post('/upload', uploadForm, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        processedData.thumbnail_url = uploadRes.data.url || uploadRes.data?.data?.url;
-      }
-      
 
-      
+      if (processedData.video_url && processedData.video_url instanceof File) {
+        processedData.video_url = await uploadFile(processedData.video_url, 'video');
+      } else if (existingVideo) {
+        processedData.video_url = existingVideo;
+      }
+
+      if (processedData.thumbnail_url && processedData.thumbnail_url instanceof File) {
+        processedData.thumbnail_url = await uploadFile(processedData.thumbnail_url, 'image');
+      } else if (existingThumb) {
+        processedData.thumbnail_url = existingThumb;
+      }
 
       if (editingId) {
         await api.put(`/video_edits/${editingId}`, processedData);
       } else {
         await api.post('/video_edits', processedData);
       }
-      
+
       closeModal();
       fetchItems();
     } catch (err) {
@@ -157,12 +159,12 @@ export default function VideoEdits() {
     <Layout>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">VideoEdits</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your videoedits data.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Video Edits</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your video edits data.</p>
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm"
+          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm cursor-pointer"
         >
           <Plus size={18} />
           <span className="hidden sm:inline">Add New</span>
@@ -177,7 +179,7 @@ export default function VideoEdits() {
         ) : items.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-gray-500">No data found.</p>
-            <button onClick={() => openModal()} className="mt-4 text-blue-600 font-medium hover:underline">
+            <button onClick={() => openModal()} className="mt-4 text-blue-600 font-medium hover:underline cursor-pointer">
               Create your first item
             </button>
           </div>
@@ -186,41 +188,58 @@ export default function VideoEdits() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase font-semibold text-gray-500">
+                  <th className="px-6 py-4 w-20">Thumbnail</th>
                   <th className="px-6 py-4">Details</th>
                   <th className="px-6 py-4 w-32 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {items.map((item) => (
-                  <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {item.title || item.name || item.nama || item.label || item.title_en || item.slug || item.mission_brief || item.quote_id || `Item ${item.id || item._id}`}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                        {item.desc || item.subtitle || item.category || item.email || item.url || ''}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-3">
-                        <button
-                          onClick={() => openModal(item)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id || item._id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item) => {
+                  const thumbUrl = item.thumbnail || item.thumbnail_url || item.image_url || item.image;
+                  return (
+                    <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        {thumbUrl ? (
+                          <img
+                            src={thumbUrl}
+                            alt={item.title_en || item.title_id || 'Thumbnail'}
+                            className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 shrink-0">
+                            <VideoIcon size={20} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {item.title_en || item.title_id || `Video ${item.id || item._id}`}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
+                          {item.title_id ? `ID: ${item.title_id}` : ''} {item.duration ? `• Duration: ${item.duration}` : ''}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => openModal(item)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id || item._id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -232,7 +251,7 @@ export default function VideoEdits() {
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8 animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
               <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Item' : 'New Item'}</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 transition-colors">
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer">
                 <X size={24} />
               </button>
             </div>
@@ -243,45 +262,61 @@ export default function VideoEdits() {
                   {error}
                 </div>
               )}
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title EN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (EN)</label>
                   <input
                     type="text"
                     name="title_en"
                     value={formData.title_en || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title ID</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (ID)</label>
                   <input
                     type="text"
                     name="title_id"
                     value={formData.title_id || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
-                  <input
-                    type="file"
-                    name="video_url"
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thumbnail {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thumbnail Image</label>
+                  {(thumbPreview || existingThumb) && (
+                    <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
+                      <img
+                        src={thumbPreview || existingThumb}
+                        alt="Thumbnail Preview"
+                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">
+                          {thumbPreview ? 'New Thumbnail Selected' : 'Current Loaded Thumbnail'}
+                        </p>
+                        <p className="text-[11px] text-gray-400">Pilih file baru di bawah jika ingin mengganti thumbnail.</p>
+                      </div>
+                    </div>
+                  )}
                   <input
                     type="file"
                     name="thumbnail_url"
+                    accept="image/*"
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
+                  />
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video File {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
+                  <input
+                    type="file"
+                    name="video_url"
+                    accept="video/*"
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
                   />
                 </div>
                 <div>
@@ -291,33 +326,23 @@ export default function VideoEdits() {
                     name="duration"
                     value={formData.duration || ''}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Order Index</label>
-                  <input
-                    type="number"
-                    name="order_index"
-                    value={formData.order_index || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
               </div>
-              
+
               <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm"
+                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                   {editingId ? 'Save Changes' : 'Create'}

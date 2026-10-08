@@ -14,12 +14,26 @@
   "type": "commonjs",
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@tailwindcss/typography": "^0.5.20",
+    "@tiptap/extension-table": "^3.31.4",
+    "@tiptap/extension-table-cell": "^3.31.4",
+    "@tiptap/extension-table-header": "^3.31.4",
+    "@tiptap/extension-table-row": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "axios": "^1.20.0",
     "browser-image-compression": "^2.0.2",
+    "d3-geo": "^3.1.1",
+    "d3-scale": "^4.0.2",
+    "framer-motion": "^14.0.0",
     "lucide-react": "^1.52.0",
     "react": "^19.3.0",
+    "react-country-flag": "^3.1.0",
     "react-dom": "^19.3.0",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "react-simple-maps": "^5.0.5",
+    "tiptap-markdown": "^0.9.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
