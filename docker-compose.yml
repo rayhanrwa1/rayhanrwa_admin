@@ -6,4 +6,4 @@ services:
     container_name: rayhanrwa_admin
     restart: always
     ports:
-      - "3001:80"
+      - "2052:80"
