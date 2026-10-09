@@ -46,13 +46,25 @@ export default function MagangkuMessages() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
       const file = files[0];
-      setFormData({ ...formData, [name]: file });
-      if (file) {
-        setImagePreview(URL.createObjectURL(file));
+      if (!file) return;
+      
+      // Local preview if exists
+      if (typeof setThumbPreview === 'function' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
+      if (typeof setImagePreview === 'function' && file.type.startsWith('image/')) setImagePreview(URL.createObjectURL(file));
+
+      setIsSubmitting(true);
+      try {
+        const url = await uploadFile(file, file.type.startsWith('video/') ? 'video' : 'image');
+        setFormData(prev => ({ ...prev, [name]: url }));
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Upload failed");
+      } finally {
+        setIsSubmitting(false);
       }
     } else if (type === 'checkbox') {
       setFormData({ ...formData, [name]: checked });
@@ -112,11 +124,7 @@ export default function MagangkuMessages() {
     try {
       let processedData = { ...formData };
       
-      if (processedData.photo && processedData.photo instanceof File) {
-        processedData.photo = await uploadFile(processedData.photo);
-      } else if (existingImage) {
-        processedData.photo = existingImage;
-      }
+      
 
       if (editingId) {
         await api.put(`/magangku_messages/${editingId}`, processedData);

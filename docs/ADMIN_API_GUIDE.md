@@ -1,13 +1,10 @@
 # 🛡️ Admin API Documentation (CRUD)
 
-Dokumen ini berisi panduan penggunaan **REST API khusus untuk Admin**. 
-
-> **💡 Info Penting (Customer vs Admin API):**
-> - **Customer API**: Semua operasi **Membaca Data (GET)** seperti `GET /api/projects` bersifat *Public* (tidak memerlukan token) dan ditujukan untuk *Frontend* Portofolio Customer. Panduannya ada di file `CUSTOMER_API_GUIDE.md`.
-> - **Admin API**: Semua operasi **Mengubah Data (POST, PUT, DELETE)** bersifat *Private* (wajib menggunakan token) dan dikhususkan untuk *Frontend* Admin (Dashboard). Dokumen inilah panduannya.
+Dokumen ini berisi panduan penggunaan **REST API khusus untuk Admin** (Create, Update, Delete). 
+Semua endpoint di bawah ini **diwajibkan** untuk mengirimkan header *Authorization*.
 
 ### 🔑 Authentication Header
-Setiap *request* yang mengubah data (POST, PUT, DELETE) **wajib** menyertakan token JWT yang didapatkan dari proses Login.
+Setiap *request* yang mengubah data harus menyertakan token JWT yang didapatkan dari proses Login.
 ```http
 Authorization: Bearer <admin_jwt_token>
 ```
@@ -38,62 +35,6 @@ Sebelum membuat data yang membutuhkan foto (seperti Profile, Journal, Apple Gall
 
 ---
 
-## 🔐 Authentication & Akun Admin
-
-### Login
-**POST** `/api/login` (Tanpa Auth)
-**Request Body:**
-```json
-{
-    "email": "admin@example.com",
-    "password": "yourpassword"
-}
-```
-**Response (200 OK):**
-```json
-{
-    "message": "Login berhasil",
-    "data": {
-        "token": "eyJhbGciOiJIUzI1...",
-        "user": { "id": "...", "email": "admin@example.com", "role": "admin" }
-    }
-}
-```
-
-### Lupa Password (Forgot Password)
-**POST** `/api/forgot-password` (Tanpa Auth)
-**Request Body:**
-```json
-{
-    "email": "admin@example.com"
-}
-```
-**Response (200 OK):** Sistem akan mengirimkan OTP ke email tersebut.
-
-### Reset Password
-**POST** `/api/reset-password` (Tanpa Auth)
-**Request Body:**
-```json
-{
-    "email": "admin@example.com",
-    "otp": "123456",
-    "new_password": "newsecurepassword"
-}
-```
-
-### Update Admin Profile (Ubah Data Diri Admin)
-**PUT** `/api/admin-profile`
-**Headers:** `Authorization: Bearer <admin_jwt_token>`
-**Request Body:**
-```json
-{
-    "name": "Rayhan",
-    "email": "admin@example.com"
-}
-```
-
----
-
 ## 🚀 1. Projects (Portofolio Utama)
 
 ### Create Project
@@ -102,12 +43,26 @@ Sebelum membuat data yang membutuhkan foto (seperti Profile, Journal, Apple Gall
 ```json
 {
     "number": "01",
+    "slug": "magangku",
     "category": "EdTech Platform",
     "title": "Magangku",
+    "short_desc_id": "Platform magang berbasis web yang berfokus pada UI/UX...",
+    "short_desc_en": "Web-based internship platform focusing on UI/UX...",
+    "long_desc_id": "Platform magang ini dibangun dengan...",
+    "long_desc_en": "This internship platform is built with...",
+    "thumbnail": "https://cdn.rayhanrwa.my.id/projects/magangku_thumb.png",
+    "images": [
+        "https://cdn.rayhanrwa.my.id/projects/magangku_1.png",
+        "https://cdn.rayhanrwa.my.id/projects/magangku_2.png"
+    ],
     "tags": ["React", "Firebase", "Tailwind", "Vite"],
-    "link": "https://magangku.web.id",
-    "desc_en": "Web-based internship platform focusing on UI/UX...",
-    "desc_id": "Platform magang berbasis web yang berfokus pada UI/UX..."
+    "live_link": "https://magangku.web.id",
+    "github_link": "https://github.com/rayhanrwa/magangku",
+    "client": "Kampus Merdeka",
+    "role": "Frontend Developer",
+    "start_date": "2023-01",
+    "end_date": "2023-06",
+    "status": "Completed"
 }
 ```
 **Response (201 Created):**

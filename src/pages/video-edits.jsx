@@ -11,12 +11,9 @@ export default function VideoEdits() {
   const [existingThumb, setExistingThumb] = useState('');
   const [existingVideo, setExistingVideo] = useState('');
   const [formData, setFormData] = useState({
-    title_en: "",
-    title_id: "",
-    video_url: "",
-    thumbnail_url: "",
-    duration: "",
-    order_index: ""
+    title: "",
+    youtube_url: "",
+    thumbnail_url: ""
   });
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,43 +43,31 @@ export default function VideoEdits() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
       const file = files[0];
-      setFormData({ ...formData, [name]: file });
-      if (name === 'thumbnail_url' && file) {
-        setThumbPreview(URL.createObjectURL(file));
+      if (!file) return;
+      
+      // Local preview if exists
+      if (typeof setThumbPreview === 'function' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
+      if (typeof setImagePreview === 'function' && file.type.startsWith('image/')) setImagePreview(URL.createObjectURL(file));
+
+      setIsSubmitting(true);
+      try {
+        const url = await uploadFile(file, file.type.startsWith('video/') ? 'video' : 'image');
+        setFormData(prev => ({ ...prev, [name]: url }));
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Upload failed");
+      } finally {
+        setIsSubmitting(false);
       }
     } else if (type === 'checkbox') {
-      setFormData({ ...formData, [name]: checked });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const openModal = (item = null) => {
-    setThumbPreview('');
-    if (item) {
-      let editableData = { ...item };
-      const currentThumb = item.thumbnail || item.thumbnail_url || item.image_url || item.image || '';
-      const currentVid = item.video_url || item.url || '';
-      setExistingThumb(currentThumb);
-      setExistingVideo(currentVid);
-      editableData.video_url = '';
-      editableData.thumbnail_url = '';
-      setFormData(editableData);
-      setEditingId(item.id || item._id);
-    } else {
-      setExistingThumb('');
-      setExistingVideo('');
       setFormData({
-        title_en: "",
-        title_id: "",
-        video_url: "",
-        thumbnail_url: "",
-        duration: "",
-        order_index: ""
+        title: "",
+        youtube_url: "",
+        thumbnail_url: ""
       });
       setEditingId(null);
     }
@@ -96,13 +81,10 @@ export default function VideoEdits() {
     setExistingThumb('');
     setExistingVideo('');
     setFormData({
-      title_en: "",
-      title_id: "",
-      video_url: "",
-      thumbnail_url: "",
-      duration: "",
-      order_index: ""
-    });
+        title: "",
+        youtube_url: "",
+        thumbnail_url: ""
+      });
     setEditingId(null);
     setError('');
   };
@@ -115,17 +97,9 @@ export default function VideoEdits() {
     try {
       let processedData = { ...formData };
 
-      if (processedData.video_url && processedData.video_url instanceof File) {
-        processedData.video_url = await uploadFile(processedData.video_url, 'video');
-      } else if (existingVideo) {
-        processedData.video_url = existingVideo;
-      }
+      
 
-      if (processedData.thumbnail_url && processedData.thumbnail_url instanceof File) {
-        processedData.thumbnail_url = await uploadFile(processedData.thumbnail_url, 'image');
-      } else if (existingThumb) {
-        processedData.thumbnail_url = existingThumb;
-      }
+      
 
       if (editingId) {
         await api.put(`/video_edits/${editingId}`, processedData);
@@ -213,10 +187,10 @@ export default function VideoEdits() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-900 text-sm">
-                          {item.title_en || item.title_id || `Video ${item.id || item._id}`}
+                          {item.title || `Video ${item.id || item._id}`}
                         </div>
                         <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                          {item.title_id ? `ID: ${item.title_id}` : ''} {item.duration ? `• Duration: ${item.duration}` : ''}
+                          {item.youtube_url ? `YouTube: ${item.youtube_url}` : ''}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -264,24 +238,25 @@ export default function VideoEdits() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (EN)</label>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
                   <input
                     type="text"
-                    name="title_en"
-                    value={formData.title_en || ''}
+                    name="title"
+                    value={formData.title || ''}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (ID)</label>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">YouTube URL</label>
                   <input
                     type="text"
-                    name="title_id"
-                    value={formData.title_id || ''}
+                    name="youtube_url"
+                    value={formData.youtube_url || ''}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
+                    placeholder="https://youtube.com/watch?v=..."
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -307,26 +282,6 @@ export default function VideoEdits() {
                     accept="image/*"
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video File {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
-                  <input
-                    type="file"
-                    name="video_url"
-                    accept="video/*"
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
-                  <input
-                    type="text"
-                    name="duration"
-                    value={formData.duration || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
                   />
                 </div>
               </div>

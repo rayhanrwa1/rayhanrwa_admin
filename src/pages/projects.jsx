@@ -7,18 +7,27 @@ import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon } from 'lucide-reac
 export default function Projects() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [imagePreview, setImagePreview] = useState('');
-  const [existingImage, setExistingImage] = useState('');
+  const [thumbPreview, setThumbPreview] = useState('');
+  const [existingThumb, setExistingThumb] = useState('');
   const [formData, setFormData] = useState({
     number: "",
+    slug: "",
     category: "",
     title: "",
-    desc: "",
-    desc_en: "",
-    desc_id: "",
+    short_desc_id: "",
+    short_desc_en: "",
+    long_desc_id: "",
+    long_desc_en: "",
+    thumbnail: "",
+    images: [],
     tags: "",
-    image: "",
-    link: ""
+    live_link: "",
+    github_link: "",
+    client: "",
+    role: "",
+    start_date: "",
+    end_date: "",
+    status: ""
   });
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,13 +57,27 @@ export default function Projects() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
       const file = files[0];
-      setFormData({ ...formData, [name]: file });
-      if (file) {
-        setImagePreview(URL.createObjectURL(file));
+      if (!file) return;
+      
+      if (name === 'thumbnail' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
+
+      setIsSubmitting(true);
+      try {
+        const url = await uploadFile(file, 'image');
+        if (name === 'images') {
+            setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: url }));
+        }
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Upload failed");
+      } finally {
+        setIsSubmitting(false);
       }
     } else if (type === 'checkbox') {
       setFormData({ ...formData, [name]: checked });
@@ -64,32 +87,45 @@ export default function Projects() {
   };
 
   const openModal = (item = null) => {
-    setImagePreview('');
+    setThumbPreview('');
     if (item) {
       let editableData = { ...item };
 
       if (Array.isArray(editableData.tags)) {
         editableData.tags = editableData.tags.join(', ');
       }
+      
+      if (!Array.isArray(editableData.images)) {
+          editableData.images = [];
+      }
 
-      const currentImg = item.image || item.image_url || item.url || '';
-      setExistingImage(currentImg);
-      editableData.image = '';
+      const currentImg = item.thumbnail || item.image || item.image_url || '';
+      setExistingThumb(currentImg);
+      editableData.thumbnail = currentImg;
 
       setFormData(editableData);
       setEditingId(item.id || item._id);
     } else {
-      setExistingImage('');
+      setExistingThumb('');
       setFormData({
         number: "",
+        slug: "",
         category: "",
         title: "",
-        desc: "",
-        desc_en: "",
-        desc_id: "",
+        short_desc_id: "",
+        short_desc_en: "",
+        long_desc_id: "",
+        long_desc_en: "",
+        thumbnail: "",
+        images: [],
         tags: "",
-        image: "",
-        link: ""
+        live_link: "",
+        github_link: "",
+        client: "",
+        role: "",
+        start_date: "",
+        end_date: "",
+        status: ""
       });
       setEditingId(null);
     }
@@ -99,21 +135,38 @@ export default function Projects() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setImagePreview('');
-    setExistingImage('');
+    setThumbPreview('');
+    setExistingThumb('');
     setFormData({
-      number: "",
-      category: "",
-      title: "",
-      desc: "",
-      desc_en: "",
-      desc_id: "",
-      tags: "",
-      image: "",
-      link: ""
+        number: "",
+        slug: "",
+        category: "",
+        title: "",
+        short_desc_id: "",
+        short_desc_en: "",
+        long_desc_id: "",
+        long_desc_en: "",
+        thumbnail: "",
+        images: [],
+        tags: "",
+        live_link: "",
+        github_link: "",
+        client: "",
+        role: "",
+        start_date: "",
+        end_date: "",
+        status: ""
     });
     setEditingId(null);
     setError('');
+  };
+
+  const removeImage = (index) => {
+      setFormData(prev => {
+          const newImages = [...prev.images];
+          newImages.splice(index, 1);
+          return { ...prev, images: newImages };
+      });
   };
 
   const handleSubmit = async (e) => {
@@ -123,12 +176,6 @@ export default function Projects() {
 
     try {
       let processedData = { ...formData };
-
-      if (processedData.image && processedData.image instanceof File) {
-        processedData.image = await uploadFile(processedData.image);
-      } else if (existingImage) {
-        processedData.image = existingImage;
-      }
 
       if (typeof processedData.tags === 'string' && processedData.tags) {
         processedData.tags = processedData.tags.split(',').map(s => s.trim()).filter(Boolean);
@@ -195,14 +242,14 @@ export default function Projects() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase font-semibold text-gray-500">
-                  <th className="px-6 py-4 w-20">Preview</th>
+                  <th className="px-6 py-4 w-20">Thumbnail</th>
                   <th className="px-6 py-4">Details</th>
                   <th className="px-6 py-4 w-32 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((item) => {
-                  const imgUrl = item.image || item.image_url || item.url;
+                  const imgUrl = item.thumbnail || item.image || item.image_url || item.url;
                   return (
                     <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
@@ -223,7 +270,7 @@ export default function Projects() {
                           {item.title || item.name || item.category || `Item ${item.id || item._id}`}
                         </div>
                         <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                          {item.desc || item.desc_id || item.desc_en || item.category || item.link || ''}
+                          {item.short_desc_id || item.short_desc_en || item.category || item.live_link || ''}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -255,9 +302,9 @@ export default function Projects() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl my-8 animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl my-8 animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
-              <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Item' : 'New Item'}</h2>
+              <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Project' : 'New Project'}</h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-700 transition-colors">
                 <X size={24} />
               </button>
@@ -271,101 +318,109 @@ export default function Projects() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Number</label>
-                  <input
-                    type="text"
-                    name="number"
-                    value={formData.number || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
+                  <input type="text" name="number" value={formData.number || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Slug</label>
+                  <input type="text" name="slug" value={formData.slug || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
-                  <input
-                    type="text"
-                    name="category"
-                    value={formData.category || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 border rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (EN)</label>
-                  <textarea
-                    name="desc_en"
-                    value={formData.desc_en || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"
-                  ></textarea>
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description (ID)</label>
-                  <textarea
-                    name="desc_id"
-                    value={formData.desc_id || ''}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all resize-y text-sm"
-                  ></textarea>
+                  <input type="text" name="category" value={formData.category || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (comma separated)</label>
-                  <input
-                    type="text"
-                    name="tags"
-                    value={formData.tags || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-sm"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
+                  <input type="text" name="title" value={formData.title || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Short Description (EN)</label>
+                  <textarea name="short_desc_en" value={formData.short_desc_en || ''} onChange={handleInputChange} rows="2" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"></textarea>
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Image</label>
-                  {(imagePreview || existingImage) && (
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Short Description (ID)</label>
+                  <textarea name="short_desc_id" value={formData.short_desc_id || ''} onChange={handleInputChange} rows="2" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"></textarea>
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Long Description (EN)</label>
+                  <textarea name="long_desc_en" value={formData.long_desc_en || ''} onChange={handleInputChange} rows="4" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"></textarea>
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Long Description (ID)</label>
+                  <textarea name="long_desc_id" value={formData.long_desc_id || ''} onChange={handleInputChange} rows="4" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-y text-sm"></textarea>
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tags (comma separated)</label>
+                  <input type="text" name="tags" value={formData.tags || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thumbnail Image</label>
+                  {(thumbPreview || existingThumb) && (
                     <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
-                      <img
-                        src={imagePreview || existingImage}
-                        alt="Preview"
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shrink-0"
-                      />
+                      <img src={thumbPreview || existingThumb} alt="Preview" className="w-16 h-16 object-cover rounded-lg border border-gray-200 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-800">
-                          {imagePreview ? 'New Image Selected' : 'Current Loaded Image'}
-                        </p>
-                        <p className="text-[11px] text-gray-400">Pilih file baru di bawah jika ingin mengganti gambar.</p>
+                        <p className="text-xs font-semibold text-gray-800">Thumbnail Preview</p>
                       </div>
                     </div>
                   )}
-                  <input
-                    type="file"
-                    name="image"
-                    accept="image/*"
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
-                  />
+                  <input type="file" name="thumbnail" accept="image/*" onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer" />
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Gallery Images</label>
+                  <div className="flex flex-wrap gap-4 mb-3">
+                      {formData.images && formData.images.map((img, i) => (
+                          <div key={i} className="relative group">
+                              <img src={img} alt="" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                              <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <X size={14} />
+                              </button>
+                          </div>
+                      ))}
+                  </div>
+                  <input type="file" name="images" accept="image/*" onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Live Link</label>
+                  <input type="text" name="live_link" value={formData.live_link || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Link</label>
-                  <input
-                    type="text"
-                    name="link"
-                    value={formData.link || ''}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">GitHub Link</label>
+                  <input type="text" name="github_link" value={formData.github_link || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Client</label>
+                  <input type="text" name="client" value={formData.client || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                  <input type="text" name="role" value={formData.role || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date (e.g. 2023-01)</label>
+                  <input type="text" name="start_date" value={formData.start_date || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date (e.g. 2023-06)</label>
+                  <input type="text" name="end_date" value={formData.end_date || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                  <select name="status" value={formData.status || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm">
+                      <option value="">-- Select Status --</option>
+                      <option value="Completed">Completed</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Maintenance">Maintenance</option>
+                  </select>
                 </div>
               </div>
 

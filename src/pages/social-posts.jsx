@@ -47,13 +47,25 @@ export default function SocialPosts() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
       const file = files[0];
-      setFormData({ ...formData, [name]: file });
-      if (file) {
-        setImagePreview(URL.createObjectURL(file));
+      if (!file) return;
+      
+      // Local preview if exists
+      if (typeof setThumbPreview === 'function' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
+      if (typeof setImagePreview === 'function' && file.type.startsWith('image/')) setImagePreview(URL.createObjectURL(file));
+
+      setIsSubmitting(true);
+      try {
+        const url = await uploadFile(file, file.type.startsWith('video/') ? 'video' : 'image');
+        setFormData(prev => ({ ...prev, [name]: url }));
+      } catch (err) {
+        console.error("Upload failed", err);
+        alert("Upload failed");
+      } finally {
+        setIsSubmitting(false);
       }
     } else if (type === 'checkbox') {
       setFormData({ ...formData, [name]: checked });
@@ -115,11 +127,7 @@ export default function SocialPosts() {
     try {
       let processedData = { ...formData };
 
-      if (processedData.foto_profile && processedData.foto_profile instanceof File) {
-        processedData.foto_profile = await uploadFile(processedData.foto_profile);
-      } else if (existingImage) {
-        processedData.foto_profile = existingImage;
-      }
+      
 
       if (editingId) {
         await api.put(`/social_posts/${editingId}`, processedData);
