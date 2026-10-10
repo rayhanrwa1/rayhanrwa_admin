@@ -62,16 +62,16 @@ export default function Projects() {
     if (type === 'file') {
       const file = files[0];
       if (!file) return;
-      
+
       if (name === 'thumbnail' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
 
       setIsSubmitting(true);
       try {
         const url = await uploadFile(file, 'image');
         if (name === 'images') {
-            setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }));
+          setFormData(prev => ({ ...prev, images: [...(prev.images || []), url] }));
         } else {
-            setFormData(prev => ({ ...prev, [name]: url }));
+          setFormData(prev => ({ ...prev, [name]: url }));
         }
       } catch (err) {
         console.error("Upload failed", err);
@@ -94,9 +94,9 @@ export default function Projects() {
       if (Array.isArray(editableData.tags)) {
         editableData.tags = editableData.tags.join(', ');
       }
-      
+
       if (!Array.isArray(editableData.images)) {
-          editableData.images = [];
+        editableData.images = [];
       }
 
       const currentImg = item.thumbnail || item.image || item.image_url || '';
@@ -138,35 +138,35 @@ export default function Projects() {
     setThumbPreview('');
     setExistingThumb('');
     setFormData({
-        number: "",
-        slug: "",
-        category: "",
-        title: "",
-        short_desc_id: "",
-        short_desc_en: "",
-        long_desc_id: "",
-        long_desc_en: "",
-        thumbnail: "",
-        images: [],
-        tags: "",
-        live_link: "",
-        github_link: "",
-        client: "",
-        role: "",
-        start_date: "",
-        end_date: "",
-        status: ""
+      number: "",
+      slug: "",
+      category: "",
+      title: "",
+      short_desc_id: "",
+      short_desc_en: "",
+      long_desc_id: "",
+      long_desc_en: "",
+      thumbnail: "",
+      images: [],
+      tags: "",
+      live_link: "",
+      github_link: "",
+      client: "",
+      role: "",
+      start_date: "",
+      end_date: "",
+      status: ""
     });
     setEditingId(null);
     setError('');
   };
 
   const removeImage = (index) => {
-      setFormData(prev => {
-          const newImages = [...prev.images];
-          newImages.splice(index, 1);
-          return { ...prev, images: newImages };
-      });
+    setFormData(prev => {
+      const newImages = [...prev.images];
+      newImages.splice(index, 1);
+      return { ...prev, images: newImages };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -238,12 +238,12 @@ export default function Projects() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6 bg-gray-50/50">
+          <div className="flex flex-col divide-y divide-gray-100 bg-white">
             {items.map((item) => {
               const imgUrl = item.thumbnail || item.image || item.image_url || item.url;
               return (
-                <div key={item.id || item._id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col group">
-                  <div className="aspect-video w-full bg-gray-100 relative overflow-hidden">
+                <div key={item.id || item._id} className="flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 gap-6 hover:bg-gray-50/50 transition-colors group">
+                  <div className="w-full sm:w-48 aspect-video sm:aspect-4/3 rounded-xl bg-gray-100 relative overflow-hidden shrink-0 border border-gray-100">
                     {imgUrl ? (
                       <img
                         src={imgUrl}
@@ -252,51 +252,61 @@ export default function Projects() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <ImageIcon size={40} />
+                        <ImageIcon size={32} />
                       </div>
                     )}
                     {item.status && (
-                      <div className="absolute top-3 right-3">
-                        <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+                      <div className="absolute top-2 right-2">
+                        <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-[9px] font-bold px-2 py-1 rounded-full shadow-sm">
                           {item.status}
                         </span>
                       </div>
                     )}
                   </div>
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-gray-900 text-base line-clamp-1">
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-bold text-gray-900 text-lg truncate">
                         {item.title || item.name || item.category || `Item ${item.id || item._id}`}
                       </h3>
+                      {item.category && (
+                        <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
+                          {item.category}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-3">
                       {item.short_desc_id || item.short_desc_en || item.category || item.live_link || 'No description provided.'}
                     </p>
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-auto">
-                      <div className="flex gap-2">
-                        {item.category && (
-                          <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
-                            {item.category}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openModal(item)}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors cursor-pointer"
-                          title="Edit"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id || item._id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {item.tags && typeof item.tags === 'string' ? item.tags.split(',').map((tag, i) => (
+                        <span key={i} className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                          {tag.trim()}
+                        </span>
+                      )) : Array.isArray(item.tags) ? item.tags.map((tag, i) => (
+                        <span key={i} className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+                          {tag}
+                        </span>
+                      )) : null}
                     </div>
+                  </div>
+
+                  <div className="flex sm:flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0 justify-end">
+                    <button
+                      onClick={() => openModal(item)}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors font-medium text-sm shadow-sm"
+                    >
+                      <Edit2 size={16} />
+                      <span className="sm:hidden">Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id || item._id)}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors font-medium text-sm shadow-sm"
+                    >
+                      <Trash2 size={16} />
+                      <span className="sm:hidden">Delete</span>
+                    </button>
                   </div>
                 </div>
               );
@@ -379,14 +389,14 @@ export default function Projects() {
                 <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Gallery Images</label>
                   <div className="flex flex-wrap gap-4 mb-3">
-                      {formData.images && formData.images.map((img, i) => (
-                          <div key={i} className="relative group">
-                              <img src={img} alt="" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
-                              <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <X size={14} />
-                              </button>
-                          </div>
-                      ))}
+                    {formData.images && formData.images.map((img, i) => (
+                      <div key={i} className="relative group">
+                        <img src={img} alt="" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                        <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                   <input type="file" name="images" accept="image/*" onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer" />
                 </div>
@@ -421,10 +431,10 @@ export default function Projects() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
                   <select name="status" value={formData.status || ''} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm">
-                      <option value="">-- Select Status --</option>
-                      <option value="Completed">Completed</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Maintenance">Maintenance</option>
+                    <option value="">-- Select Status --</option>
+                    <option value="Completed">Completed</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Maintenance">Maintenance</option>
                   </select>
                 </div>
               </div>
