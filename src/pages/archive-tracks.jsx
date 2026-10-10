@@ -9,6 +9,8 @@ export default function ArchiveTracks() {
   const [loading, setLoading] = useState(true);
   const [imagePreview, setImagePreview] = useState('');
   const [existingImage, setExistingImage] = useState('');
+  const [audioPreview, setAudioPreview] = useState('');
+  const [existingAudio, setExistingAudio] = useState('');
   const [formData, setFormData] = useState({
     title: "",
     artist: "",
@@ -53,14 +55,17 @@ export default function ArchiveTracks() {
     if (type === 'file') {
       const file = files[0];
       if (!file) return;
-      
-      // Local preview if exists
-      if (typeof setThumbPreview === 'function' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
-      if (typeof setImagePreview === 'function' && file.type.startsWith('image/')) setImagePreview(URL.createObjectURL(file));
+
+      if (file.type.startsWith('image/')) setImagePreview(URL.createObjectURL(file));
+      if (file.type.startsWith('audio/')) setAudioPreview(URL.createObjectURL(file));
 
       setIsSubmitting(true);
       try {
-        const url = await uploadFile(file, file.type.startsWith('video/') ? 'video' : 'image');
+        let uploadType = 'image';
+        if (file.type.startsWith('video/')) uploadType = 'video';
+        if (file.type.startsWith('audio/')) uploadType = 'audio';
+
+        const url = await uploadFile(file, uploadType);
         setFormData(prev => ({ ...prev, [name]: url }));
       } catch (err) {
         console.error("Upload failed", err);
@@ -77,16 +82,16 @@ export default function ArchiveTracks() {
 
   const openModal = (item = null) => {
     setImagePreview('');
+    setAudioPreview('');
     if (item) {
       let editableData = { ...item };
-      const currentPhoto = item.photo || item.image || item.image_url || '';
-      setExistingImage(currentPhoto);
-      editableData.photo = '';
-      editableData.audio = '';
+      setExistingImage(item.photo || item.image || item.image_url || '');
+      setExistingAudio(item.audio || item.audio_url || item.url || '');
       setFormData(editableData);
       setEditingId(item.id || item._id);
     } else {
       setExistingImage('');
+      setExistingAudio('');
       setFormData({
         title: "",
         artist: "",
@@ -107,7 +112,9 @@ export default function ArchiveTracks() {
   const closeModal = () => {
     setIsModalOpen(false);
     setImagePreview('');
+    setAudioPreview('');
     setExistingImage('');
+    setExistingAudio('');
     setFormData({
       title: "",
       artist: "",
@@ -131,9 +138,9 @@ export default function ArchiveTracks() {
     try {
       let processedData = { ...formData };
 
-      
 
-      
+
+
 
       if (editingId) {
         await api.put(`/archive_tracks/${editingId}`, processedData);
@@ -319,6 +326,20 @@ export default function ArchiveTracks() {
                 </div>
                 <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Audio File {editingId && <span className="text-gray-400 font-normal">(Leave empty to keep current)</span>}</label>
+                  {(audioPreview || existingAudio) && (
+                    <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
+                      <audio
+                        src={audioPreview || existingAudio}
+                        className="w-full max-w-md h-12"
+                        controls
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">
+                          {audioPreview ? 'New Audio Selected' : 'Current Loaded Audio'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <input
                     type="file"
                     name="audio"

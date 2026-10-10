@@ -10,9 +10,11 @@ export default function VideoEdits() {
   const [thumbPreview, setThumbPreview] = useState('');
   const [existingThumb, setExistingThumb] = useState('');
   const [existingVideo, setExistingVideo] = useState('');
+  const [videoPreview, setVideoPreview] = useState('');
   const [formData, setFormData] = useState({
     title: "",
     youtube_url: "",
+    video_url: "",
     thumbnail_url: ""
   });
   const [editingId, setEditingId] = useState(null);
@@ -49,9 +51,8 @@ export default function VideoEdits() {
       const file = files[0];
       if (!file) return;
       
-      // Local preview if exists
-      if (typeof setThumbPreview === 'function' && file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
-      if (typeof setImagePreview === 'function' && file.type.startsWith('image/')) setImagePreview(URL.createObjectURL(file));
+      if (file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
+      if (file.type.startsWith('video/')) setVideoPreview(URL.createObjectURL(file));
 
       setIsSubmitting(true);
       try {
@@ -64,9 +65,28 @@ export default function VideoEdits() {
         setIsSubmitting(false);
       }
     } else if (type === 'checkbox') {
+      setFormData({ ...formData, [name]: checked });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const openModal = (item = null) => {
+    setThumbPreview('');
+    setVideoPreview('');
+    if (item) {
+      let editableData = { ...item };
+      setExistingThumb(item.thumbnail || item.thumbnail_url || item.image_url || item.image || '');
+      setExistingVideo(item.video_url || item.video || '');
+      setFormData(editableData);
+      setEditingId(item.id || item._id);
+    } else {
+      setExistingThumb('');
+      setExistingVideo('');
       setFormData({
         title: "",
         youtube_url: "",
+        video_url: "",
         thumbnail_url: ""
       });
       setEditingId(null);
@@ -78,13 +98,15 @@ export default function VideoEdits() {
   const closeModal = () => {
     setIsModalOpen(false);
     setThumbPreview('');
+    setVideoPreview('');
     setExistingThumb('');
     setExistingVideo('');
     setFormData({
-        title: "",
-        youtube_url: "",
-        thumbnail_url: ""
-      });
+      title: "",
+      youtube_url: "",
+      video_url: "",
+      thumbnail_url: ""
+    });
     setEditingId(null);
     setError('');
   };
@@ -257,6 +279,30 @@ export default function VideoEdits() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                     placeholder="https://youtube.com/watch?v=..."
+                  />
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video File</label>
+                  {(videoPreview || existingVideo) && (
+                    <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
+                      <video
+                        src={videoPreview || existingVideo}
+                        className="w-32 h-20 object-cover rounded-lg border border-gray-200 shrink-0"
+                        controls
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">
+                          {videoPreview ? 'New Video Selected' : 'Current Loaded Video'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    name="video_url"
+                    accept="video/*"
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">

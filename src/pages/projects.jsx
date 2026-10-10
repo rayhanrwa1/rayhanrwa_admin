@@ -238,64 +238,69 @@ export default function Projects() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase font-semibold text-gray-500">
-                  <th className="px-6 py-4 w-20">Thumbnail</th>
-                  <th className="px-6 py-4">Details</th>
-                  <th className="px-6 py-4 w-32 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {items.map((item) => {
-                  const imgUrl = item.thumbnail || item.image || item.image_url || item.url;
-                  return (
-                    <tr key={item.id || item._id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        {imgUrl ? (
-                          <img
-                            src={imgUrl}
-                            alt={item.title || 'Preview'}
-                            className="w-12 h-12 object-cover rounded-lg border border-gray-200 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 shrink-0">
-                            <ImageIcon size={20} />
-                          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6 bg-gray-50/50">
+            {items.map((item) => {
+              const imgUrl = item.thumbnail || item.image || item.image_url || item.url;
+              return (
+                <div key={item.id || item._id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col group">
+                  <div className="aspect-video w-full bg-gray-100 relative overflow-hidden">
+                    {imgUrl ? (
+                      <img
+                        src={imgUrl}
+                        alt={item.title || 'Preview'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300">
+                        <ImageIcon size={40} />
+                      </div>
+                    )}
+                    {item.status && (
+                      <div className="absolute top-3 right-3">
+                        <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+                          {item.status}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5 flex-1 flex flex-col">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-gray-900 text-base line-clamp-1">
+                        {item.title || item.name || item.category || `Item ${item.id || item._id}`}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
+                      {item.short_desc_id || item.short_desc_en || item.category || item.live_link || 'No description provided.'}
+                    </p>
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-auto">
+                      <div className="flex gap-2">
+                        {item.category && (
+                          <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                            {item.category}
+                          </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-900 text-sm">
-                          {item.title || item.name || item.category || `Item ${item.id || item._id}`}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                          {item.short_desc_id || item.short_desc_en || item.category || item.live_link || ''}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center gap-3">
-                          <button
-                            onClick={() => openModal(item)}
-                            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-                            title="Edit"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id || item._id)}
-                            className="text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openModal(item)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id || item._id)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
