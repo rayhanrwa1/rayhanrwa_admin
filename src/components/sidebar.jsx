@@ -6,7 +6,7 @@ import {
   Quotes, Certificate, Camera, Image, ShareNetwork, Link,
   PaintBrush, VideoCamera, SignOut, Key
 } from '@phosphor-icons/react';
-import { X, Loader2, ChevronLeft, ChevronRight, ChevronDown, Globe } from 'lucide-react';
+import { X, Loader2, ChevronLeft, ChevronRight, ChevronDown, Globe, Server, Link2, Users, Activity } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 
@@ -23,6 +23,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   // State for collapsible groups
   const [expandedGroups, setExpandedGroups] = useState({
     'MAIN': true,
+    'AI & CLOUD SYSTEM': true,
     'ARCHIVE': true,
     'JOURNEY & PROJECT': true,
     'JOURNAL': true,
@@ -91,6 +92,15 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       items: [
         { name: 'Dashboard', path: '/dashboard', icon: <SquaresFour size={18} /> },
         { name: 'Visitors', path: '/visitors', icon: <Globe size={18} /> }
+      ]
+    },
+    {
+      title: 'AI & CLOUD SYSTEM',
+      items: [
+        { name: 'Server Configs', path: '/server-configs', icon: <Server size={18} /> },
+        { name: 'Integrations', path: '/integrations', icon: <Link2 size={18} /> },
+        { name: 'AI Characters', path: '/ai-characters', icon: <Users size={18} /> },
+        { name: 'AI Monitoring', path: '/ai-monitoring', icon: <Activity size={18} /> }
       ]
     },
     {

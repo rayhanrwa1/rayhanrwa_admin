@@ -22,7 +22,10 @@ import SocialPosts from './pages/social-posts';
 import MagangkuItems from './pages/magangku-items';
 import MagangkuMessages from './pages/magangku-messages';
 import ShareBackgrounds from './pages/share-backgrounds';
-
+import ServerConfigs from './pages/server-configs';
+import Integrations from './pages/integrations';
+import AICharacters from './pages/ai-characters';
+import AIMonitoring from './pages/ai-monitoring';
 
 function App() {
   return (
@@ -53,7 +56,13 @@ function App() {
         <Route path="/magangku-items" element={<MagangkuItems />} />
         <Route path="/magangku-messages" element={<MagangkuMessages />} />
         <Route path="/share-backgrounds" element={<ShareBackgrounds />} />
-</Routes>
+
+        {/* AI & Cloud System Routes */}
+        <Route path="/server-configs" element={<ServerConfigs />} />
+        <Route path="/integrations" element={<Integrations />} />
+        <Route path="/ai-characters" element={<AICharacters />} />
+        <Route path="/ai-monitoring" element={<AIMonitoring />} />
+      </Routes>
     </BrowserRouter>
   );
 }
