@@ -398,11 +398,10 @@ export default function AIMonitoring() {
                   <button
                     key={item.key}
                     onClick={() => setSelectedDay(item.key)}
-                    className={`p-2 rounded-xl text-xs transition flex flex-col items-center justify-center ${
-                      isSelected
-                        ? 'bg-purple-500 text-white font-bold shadow-xs'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`p-2 rounded-xl text-xs transition flex flex-col items-center justify-center ${isSelected
+                      ? 'bg-purple-500 text-white font-bold shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                   >
                     <span className={`text-[10px] ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>
                       {item.day}

@@ -6,7 +6,7 @@ import {
   Quotes, Certificate, Camera, Image, ShareNetwork, Link,
   PaintBrush, VideoCamera, SignOut, Key
 } from '@phosphor-icons/react';
-import { X, Loader2, ChevronLeft, ChevronRight, ChevronDown, Globe, Server, Link2, Users, Activity } from 'lucide-react';
+import { X, Loader2, ChevronLeft, ChevronRight, ChevronDown, Globe, Server, Link2, Users, Activity, Terminal } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 
@@ -100,7 +100,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { name: 'Server Configs', path: '/server-configs', icon: <Server size={18} /> },
         { name: 'Integrations', path: '/integrations', icon: <Link2 size={18} /> },
         { name: 'AI Characters', path: '/ai-characters', icon: <Users size={18} /> },
-        { name: 'AI Monitoring', path: '/ai-monitoring', icon: <Activity size={18} /> }
+        { name: 'AI Monitoring', path: '/ai-monitoring', icon: <Activity size={18} /> },
+        { name: 'System Logs', path: '/system-logs', icon: <Terminal size={18} /> }
       ]
     },
     {

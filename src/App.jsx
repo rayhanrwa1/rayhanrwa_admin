@@ -26,6 +26,7 @@ import ServerConfigs from './pages/server-configs';
 import Integrations from './pages/integrations';
 import AICharacters from './pages/ai-characters';
 import AIMonitoring from './pages/ai-monitoring';
+import SystemLogs from './pages/system-logs';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
         <Route path="/integrations" element={<Integrations />} />
         <Route path="/ai-characters" element={<AICharacters />} />
         <Route path="/ai-monitoring" element={<AIMonitoring />} />
+        <Route path="/system-logs" element={<SystemLogs />} />
       </Routes>
     </BrowserRouter>
   );
