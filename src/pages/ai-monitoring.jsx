@@ -9,13 +9,20 @@ import {
   Clock,
   Search,
   RefreshCw,
-  TrendingUp,
   Cpu,
-  Layers,
-  Sparkles,
-  ShieldCheck,
+  Mail,
+  Phone,
+  MoreHorizontal,
+  FileText,
+  ChevronRight,
   Send,
-  Radio
+  Check,
+  X,
+  Radio,
+  ExternalLink,
+  MessageSquare,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 
 export default function AIMonitoring() {
@@ -23,9 +30,13 @@ export default function AIMonitoring() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
+  const [navTab, setNavTab] = useState('members'); // 'overview', 'members', 'telemetry', 'logs'
+  const [sidebarTab, setSidebarTab] = useState('activities'); // 'overview', 'activities'
   const [searchQuery, setSearchQuery] = useState('');
   const [simulating, setSimulating] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [selectedAgentName, setSelectedAgentName] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -59,13 +70,35 @@ export default function AIMonitoring() {
       setSimulating(true);
       const res = await api.post('/ai-traffic/simulate');
       const char = res.data?.data?.character_name || 'AI Staff';
-      setToastMessage(`Aktivitas baru tercatat: ${char} menyelesaikan tugas.`);
-      setTimeout(() => setToastMessage(''), 3000);
+      setToastMessage(`Aktivitas baru dicatat: ${char} berhasil menyelesaikan instruksi.`);
+      setTimeout(() => setToastMessage(''), 4000);
       fetchData();
     } catch (err) {
       console.error(err);
+      setToastMessage('Gagal simulasi event.');
+      setTimeout(() => setToastMessage(''), 3000);
     } finally {
       setSimulating(false);
+    }
+  };
+
+  const handleSendEmailReport = async () => {
+    try {
+      setSendingEmail(true);
+      const res = await api.post('/ai-traffic/send-report', {
+        recipient_email: '', // Backend automatically extracts or defaults to Bos Rayhan's email
+        report_title: 'Executive AI Town Operations & Team Monitoring Report',
+        notes: 'Laporan pemantauan performa seluruh agen AI Town dikirim langsung via Admin Dashboard.'
+      });
+      const recipient = res.data?.recipient || 'email Bos Rayhan';
+      setToastMessage(`Sukses! Laporan executive dikirimkan ke: ${recipient}`);
+      setTimeout(() => setToastMessage(''), 5000);
+    } catch (err) {
+      console.error(err);
+      setToastMessage('Gagal mengirimkan email laporan.');
+      setTimeout(() => setToastMessage(''), 4000);
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -77,8 +110,9 @@ export default function AIMonitoring() {
     total_tokens: 552515
   };
 
-  // Filter personas
   const personas = stats?.character_traffic || [];
+
+  // Filter personas
   const filteredPersonas = personas.filter((p) => {
     if (activeTab !== 'ALL' && p.division !== activeTab) return false;
     if (searchQuery) {
@@ -95,8 +129,21 @@ export default function AIMonitoring() {
 
   // Calculate overall effectiveness
   const avgEffectiveness = personas.length > 0
-    ? (personas.reduce((acc, curr) => acc + (curr.effectiveness_rate || 94), 0) / personas.length).toFixed(1)
-    : '96.4';
+    ? (personas.reduce((acc, curr) => acc + (curr.effectiveness_rate || 95.5), 0) / personas.length).toFixed(1)
+    : '96.8';
+
+  // Selected agent (default to first or Ikhsan)
+  const currentAgent = personas.find(p => p.name === selectedAgentName) || personas[0] || {
+    name: 'Ikhsan',
+    division: 'IT',
+    role: 'Database & Security Admin',
+    status: 'working',
+    count: 133,
+    avg_response_ms: 361,
+    tokens_burned: 4417,
+    effectiveness_rate: 98.4,
+    recent_thought: 'Siap menerima instruksi dan menjalankan tugas divisi.'
+  };
 
   const getDivisionBadge = (division) => {
     switch (division) {
@@ -115,284 +162,446 @@ export default function AIMonitoring() {
 
   return (
     <Layout>
-      {/* Toast */}
+      {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed top-20 right-8 z-50 bg-black text-white px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 border border-gray-800 animate-in fade-in">
-          <CheckCircle2 size={15} className="text-emerald-400" />
+        <div className="fixed top-20 right-8 z-50 bg-black text-white px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5 border border-gray-800 shadow-xl animate-in fade-in">
+          <CheckCircle2 size={16} className="text-emerald-400" />
           {toastMessage}
         </div>
       )}
 
-      {/* DeepSeek API Live Telemetry Strip (Flat, minimalist, compact) */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-800">
-            <Cpu size={18} />
+      {/* Top Header / Breadcrumbs matching class style */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-400 mb-1">
+            <span className="hover:text-gray-600 cursor-pointer">AI Operations</span>
+            <span>&rsaquo;</span>
+            <span className="text-gray-700 font-semibold">{currentAgent.name}</span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">DeepSeek API Engine</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-[11px] text-emerald-700 font-medium">Live Connected</span>
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5">
-              Saldo Akun: <strong className="text-gray-900 font-semibold">${ds.topped_up_balance} {ds.currency}</strong>
-              <span className="mx-2 text-gray-300">•</span>
-              Biaya Terpakai: <strong className="text-gray-900 font-semibold">${ds.total_cost_usd?.toFixed(2) || '0.13'}</strong>
-              <span className="mx-2 text-gray-300">•</span>
-              Total Token: <strong className="text-gray-900 font-semibold">{(ds.total_tokens || 552515).toLocaleString()}</strong>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Team Performance & Monitoring
+          </h1>
+          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+            <span>Created On: <strong className="text-gray-800 font-medium">Today, 12 Oct 2026</strong></span>
+            <span className="text-gray-300">•</span>
+            {/* Avatar group badge */}
+            <div className="flex items-center -space-x-1.5">
+              {personas.slice(0, 3).map((p, i) => (
+                <div
+                  key={i}
+                  className="w-5 h-5 rounded-full bg-gray-800 text-white text-[9px] font-bold flex items-center justify-center border border-white"
+                >
+                  {p.name.charAt(0)}
+                </div>
+              ))}
+              <span className="text-[10px] font-semibold text-gray-600 bg-gray-100 px-1 py-0.5 rounded-full border border-gray-200 ml-1">
+                +{personas.length}
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Action Buttons Top Right */}
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchData}
-            disabled={loading}
-            className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 flex items-center gap-1.5 transition"
+            onClick={handleSendEmailReport}
+            disabled={sendingEmail}
+            className="px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 flex items-center gap-1.5 shadow-sm transition"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Sync
+            <Mail size={14} className={sendingEmail ? 'animate-bounce text-blue-600' : 'text-gray-500'} />
+            {sendingEmail ? 'Mengirim...' : 'Send Email Report'}
           </button>
           <button
             onClick={handleSimulate}
             disabled={simulating}
-            className="px-3.5 py-1.5 bg-black hover:bg-gray-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition"
+            className="px-3.5 py-2 bg-black hover:bg-gray-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
           >
-            <Radio size={13} className={simulating ? 'animate-pulse' : ''} />
-            Test Task Event
+            <Radio size={14} className={simulating ? 'animate-pulse text-emerald-400' : ''} />
+            + Add Task Event
           </button>
         </div>
       </div>
 
-      {/* Main Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Activity className="w-6 h-6 text-black" /> Monitoring Efektivitas Tim AI
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Evaluasi produktivitas, ketepatan tugas, dan kecepatan respons tiap anggota kantor (Lutfi, Farras, Bayu, Hanai, dll).
-          </p>
-        </div>
+      {/* Navigation Sub-Tabs matching reference (Details, Position, Documents, Assessment, Notes, etc.) */}
+      <div className="border-b border-gray-200 mb-6 flex items-center gap-8 text-xs font-medium text-gray-500 overflow-x-auto">
+        <button
+          onClick={() => setNavTab('members')}
+          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+            navTab === 'members'
+              ? 'border-black text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Staff Members ({personas.length})
+        </button>
+        <button
+          onClick={() => setNavTab('overview')}
+          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+            navTab === 'overview'
+              ? 'border-black text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Performance Matrix
+        </button>
+        <button
+          onClick={() => setNavTab('telemetry')}
+          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+            navTab === 'telemetry'
+              ? 'border-black text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          DeepSeek Telemetry
+        </button>
+        <button
+          onClick={() => setNavTab('logs')}
+          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+            navTab === 'logs'
+              ? 'border-black text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          Live Logs ({logs.length})
+        </button>
       </div>
 
-      {/* 4 Summary Cards (Flat, clean, no heavy shadows) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs font-medium text-gray-500">Rata-Rata Efektivitas Tim</div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">{avgEffectiveness}%</span>
-            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-              Optimal
-            </span>
-          </div>
-          <p className="text-[11px] text-gray-400 mt-1">Dihitung dari tingkat keberhasilan task</p>
-        </div>
+      {/* Main Split Layout matching reference screenshot */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: Agent Dossier & Activities (3.5 cols) */}
+        <div className="lg:col-span-4 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+          {/* Selected Agent Header */}
+          <div className="text-center pb-5 border-b border-gray-100">
+            <div className="relative inline-block mx-auto mb-3">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xl flex items-center justify-center border-2 border-white shadow-sm ring-1 ring-gray-200">
+                {currentAgent.name.charAt(0)}
+              </div>
+              <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"></span>
+            </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs font-medium text-gray-500">Top Performer (Paling Efektif)</div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">{stats?.top_agent || 'Lutfi'}</span>
-            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-              98.4%
-            </span>
-          </div>
-          <p className="text-[11px] text-gray-400 mt-1">Throughput tinggi & response cepat</p>
-        </div>
+            <h3 className="text-base font-bold text-gray-900">{currentAgent.name}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Group | <span className="font-mono text-gray-700 font-medium">#{currentAgent.division.toUpperCase()}-{currentAgent.name.toUpperCase()}</span>
+            </p>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs font-medium text-gray-500">Total Tugas Terselesaikan</div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">{stats?.total_activities || 14}</span>
-            <span className="text-xs text-gray-500">Tugas</span>
-          </div>
-          <p className="text-[11px] text-gray-400 mt-1">Chat Telegram & otonom worker</p>
-        </div>
+            {/* 3 Quick Action Buttons matching reference (Mail, Call, More) */}
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <button
+                onClick={handleSendEmailReport}
+                title="Send email report for this agent"
+                className="w-10 h-10 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 flex items-center justify-center transition shadow-2xs"
+              >
+                <Mail size={18} />
+              </button>
+              <button
+                onClick={handleSimulate}
+                title="Trigger simulated task"
+                className="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 flex items-center justify-center transition shadow-2xs"
+              >
+                <Phone size={18} />
+              </button>
+              <button
+                onClick={fetchData}
+                title="Refresh telemetry"
+                className="w-10 h-10 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 flex items-center justify-center transition shadow-2xs"
+              >
+                <MoreHorizontal size={18} />
+              </button>
+            </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="text-xs font-medium text-gray-500">Kecepatan Respons Rata-Rata</div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-gray-900">320</span>
-            <span className="text-xs text-gray-500">ms</span>
+            <div className="text-[11px] text-gray-400 mt-3 font-medium flex items-center justify-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Last Activity: <strong className="text-gray-700 font-semibold">{currentAgent.last_active || 'Baru Saja'}</strong>
+            </div>
           </div>
-          <p className="text-[11px] text-gray-400 mt-1">Waktu eksekusi instruksi per agent</p>
-        </div>
-      </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 mb-6 flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto">
-          {['ALL', 'IT', 'Financial', 'Marketing', 'Asisten Pribadi'].map((tab) => (
+          {/* Segmented Tab Switcher (Overview vs Activities) */}
+          <div className="flex border-b border-gray-200 mt-4">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
-                activeTab === tab
-                  ? 'bg-black text-white'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              onClick={() => setSidebarTab('activities')}
+              className={`flex-1 py-2 text-center text-xs font-semibold transition border-b-2 ${
+                sidebarTab === 'activities'
+                  ? 'border-black text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-700'
               }`}
             >
-              {tab === 'ALL' ? 'Semua Staf (13)' : tab}
+              Activities
             </button>
-          ))}
-        </div>
-
-        {/* Search Input */}
-        <div className="relative w-full md:w-64">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Cari nama misal 'farras', 'lutfi'..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:bg-white transition"
-          />
-        </div>
-      </div>
-
-      {/* Grid: Kartu Monitoring Orang-Orangnya (Farras, Lutfi, Bayu, dll) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {filteredPersonas.map((person) => {
-          const eff = person.effectiveness_rate ? person.effectiveness_rate.toFixed(1) : '94.0';
-          const effNum = parseFloat(eff);
-          return (
-            <div
-              key={person.name}
-              className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col justify-between hover:border-gray-300 transition"
+            <button
+              onClick={() => setSidebarTab('overview')}
+              className={`flex-1 py-2 text-center text-xs font-semibold transition border-b-2 ${
+                sidebarTab === 'overview'
+                  ? 'border-black text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-700'
+              }`}
             >
-              {/* Header: Name, Division, Role */}
+              Profile Info
+            </button>
+          </div>
+
+          {/* Tab Content: Activities Timeline */}
+          {sidebarTab === 'activities' ? (
+            <div className="pt-4 space-y-4">
+              {/* Timeline item 1 */}
+              <div className="flex items-start gap-3 relative">
+                <div className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-0.5">
+                  <MessageSquare size={13} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-800">
+                    Instruksi Diterima dari Bos Rayhan
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Hari ini • Sesi Telegram</p>
+                  <span className="inline-block mt-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    ✓ Accepted
+                  </span>
+                </div>
+              </div>
+
+              {/* Timeline item 2 */}
+              <div className="flex items-start gap-3 relative">
+                <div className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-0.5">
+                  <Activity size={13} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-800">
+                    Eksekusi Tugas & Pemrosesan Log
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Latency {currentAgent.avg_response_ms || 340}ms</p>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                      Active
+                    </span>
+                    <ArrowRight size={10} className="text-gray-400" />
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                      In progress
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline item 3: Thought / Focus */}
+              <div className="flex items-start gap-3 relative">
+                <div className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-0.5">
+                  <Sparkles size={13} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-800">
+                    Status Pikiran & Fokus AI
+                  </p>
+                  <p className="text-[11px] text-gray-600 italic bg-gray-50 p-2 rounded-lg border border-gray-100 mt-1">
+                    "{currentAgent.recent_thought || 'Siap menerima instruksi dan menjalankan tugas divisi.'}"
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Tab Content: Profile Info */
+            <div className="pt-4 space-y-3 text-xs">
+              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                <span className="text-gray-400">Divisi Kerja</span>
+                <span className={`font-semibold px-2 py-0.5 rounded border text-[11px] ${getDivisionBadge(currentAgent.division)}`}>
+                  {currentAgent.division}
+                </span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                <span className="text-gray-400">Peran & Tanggung Jawab</span>
+                <span className="font-semibold text-gray-900 text-right">{currentAgent.role}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                <span className="text-gray-400">Total Tugas Selesai</span>
+                <span className="font-bold text-gray-900">{currentAgent.count || 0} Task</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                <span className="text-gray-400">Kecepatan Respons</span>
+                <span className="font-mono font-semibold text-gray-900">{currentAgent.avg_response_ms || 340} ms</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-gray-100">
+                <span className="text-gray-400">Total Token Terpakai</span>
+                <span className="font-mono font-semibold text-gray-900">{(currentAgent.tokens_burned || 0).toLocaleString()} tok</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-gray-400">Efektivitas Kerja</span>
+                <span className="font-bold text-emerald-600">
+                  {currentAgent.effectiveness_rate ? currentAgent.effectiveness_rate.toFixed(1) : '95.5'}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN: 3 Top KPI Cards + Clean Filter & Rows (8.5 cols) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Top 3 KPI Metric Cards matching reference (Docs Owed [5], Docs Pending Reviews [4], Docs Accepted [12/13]) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Card 1: Team Effectiveness */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center font-bold text-sm text-gray-800">
+                <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
+                  <Clock size={13} />
+                  <span>Team Effectiveness</span>
+                </div>
+                <div className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
+                  {avgEffectiveness}<span className="text-xl font-normal text-gray-400">%</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-2 flex items-center justify-between text-[11px] font-medium text-gray-500">
+                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  Optimal
+                </span>
+                <span className="text-gray-700 font-semibold cursor-pointer flex items-center hover:underline">
+                  Go To Analytics &rsaquo;
+                </span>
+              </div>
+            </div>
+
+            {/* Card 2: Avg Latency */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
+                  <Activity size={13} />
+                  <span>Avg Response Latency</span>
+                </div>
+                <div className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
+                  320 <span className="text-base font-normal text-gray-400">ms</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-2 text-[11px] text-gray-400">
+                Throughput tinggi & stabil
+              </div>
+            </div>
+
+            {/* Card 3: Active Personnel */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
+                  <Users size={13} />
+                  <span>Agents On-Duty</span>
+                </div>
+                <div className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
+                  12 <span className="text-lg font-normal text-gray-400">/ 13</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-2 text-[11px] text-gray-400">
+                Total {stats?.total_activities || 674} tugas terselesaikan
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Bar & Action Strip matching reference (All Documents, Portal Milestones | + Add Template, etc.) */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+              {['ALL', 'IT', 'Financial', 'Marketing', 'Asisten Pribadi'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
+                    activeTab === tab
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                  }`}
+                >
+                  {tab === 'ALL' ? `Semua Staf (${personas.length})` : tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full sm:w-60">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari anggota tim..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:bg-white transition"
+              />
+            </div>
+          </div>
+
+          {/* List of Personnel Cards (Clean Row items matching Documents List from user screenshot) */}
+          <div className="space-y-2.5">
+            {filteredPersonas.map((person) => {
+              const isSelected = currentAgent.name === person.name;
+              const eff = person.effectiveness_rate ? person.effectiveness_rate.toFixed(1) : '95.0';
+              const effNum = parseFloat(eff);
+
+              return (
+                <div
+                  key={person.name}
+                  onClick={() => setSelectedAgentName(person.name)}
+                  className={`bg-white border rounded-xl p-3.5 flex items-center justify-between gap-4 cursor-pointer transition shadow-2xs hover:border-gray-400 ${
+                    isSelected ? 'border-black ring-1 ring-black bg-gray-50/50' : 'border-gray-200'
+                  }`}
+                >
+                  {/* Left: Icon & Meta */}
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700 shrink-0 font-bold text-sm">
                       {person.name.charAt(0)}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-gray-900">{person.name}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getDivisionBadge(person.division)}`}>
+                        <h4 className="text-xs font-bold text-gray-900 truncate">{person.name}</h4>
+                        <span className={`text-[10px] font-semibold px-2 py-0.2 rounded border ${getDivisionBadge(person.division)}`}>
                           {person.division}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-500 block">{person.role}</span>
+                      <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+                        {person.role} • <span className="font-mono text-gray-600">{person.count || 0} tasks</span> • <span className="font-mono text-gray-600">{person.avg_response_ms || 340}ms</span> • <span className="font-mono text-gray-600">{(person.tokens_burned || 0).toLocaleString()} tok</span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Status dot */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium">
+                  {/* Right: Score Pill & Action Buttons (Check, Close/Info, Dots) */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Unique Effectiveness Pill */}
+                    <div className="text-right">
+                      <span className={`text-xs font-bold px-2 py-1 rounded-md border ${
+                        effNum >= 97 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
+                        effNum >= 95 ? 'text-blue-700 bg-blue-50 border-blue-200' :
+                        'text-amber-700 bg-amber-50 border-amber-200'
+                      }`}>
+                        {eff}%
+                      </span>
+                    </div>
+
+                    {/* Checkmark icon (circular dark background) */}
+                    <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center">
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+
+                    {/* Status Pill */}
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span className="capitalize">{person.status || 'Active'}</span>
-                  </div>
-                </div>
 
-                {/* Score & Progress Bar */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-medium text-gray-500">Skor Efektivitas Kerja</span>
-                    <span className={`font-bold ${effNum >= 95 ? 'text-emerald-600' : 'text-blue-600'}`}>
-                      {eff}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${
-                        effNum >= 96 ? 'bg-emerald-500' : effNum >= 92 ? 'bg-blue-500' : 'bg-amber-500'
-                      }`}
-                      style={{ width: `${Math.min(effNum, 100)}%` }}
-                    ></div>
+                    {/* Dots Menu */}
+                    <button className="text-gray-400 hover:text-gray-700 p-1">
+                      <MoreHorizontal size={14} />
+                    </button>
                   </div>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Performance Stats Mini Row */}
-                <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-                  <div className="bg-gray-50 border border-gray-100 rounded-lg p-2">
-                    <span className="text-[10px] text-gray-400 block font-medium">Tasks</span>
-                    <span className="text-xs font-bold text-gray-800">{person.count || 1}</span>
-                  </div>
-                  <div className="bg-gray-50 border border-gray-100 rounded-lg p-2">
-                    <span className="text-[10px] text-gray-400 block font-medium">Latency</span>
-                    <span className="text-xs font-bold text-gray-800">{person.avg_response_ms || 340}ms</span>
-                  </div>
-                  <div className="bg-gray-50 border border-gray-100 rounded-lg p-2">
-                    <span className="text-[10px] text-gray-400 block font-medium">Tokens</span>
-                    <span className="text-xs font-bold text-gray-800">{person.tokens_burned || 180}</span>
-                  </div>
-                </div>
+          {/* DeepSeek Telemetry Strip */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700">
+                <Cpu size={16} />
               </div>
-
-              {/* Recent Output / Focus Text */}
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <span className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider block mb-1">
-                  Aktivitas & Fokus Terakhir
-                </span>
-                <p className="text-xs text-gray-600 italic line-clamp-2">
-                  "{person.recent_thought || 'Siap menerima instruksi dan menjalankan tugas divisi.'}"
-                </p>
+              <div>
+                <span className="font-bold text-gray-900">DeepSeek API Engine</span>
+                <span className="text-gray-400 ml-2">Saldo: <strong className="text-gray-900">${ds.topped_up_balance} {ds.currency}</strong></span>
+                <span className="text-gray-400 ml-2">Total Tokens: <strong className="text-gray-900">{(ds.total_tokens || 552515).toLocaleString()}</strong></span>
               </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Activity Logs Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-gray-900">Riwayat Penugasan & Telemetri Terkini</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Catatan live eksekusi tugas masing-masing personel AI</p>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="text-[11px] font-semibold text-emerald-700">100% Operational</span>
+            </div>
           </div>
-          <span className="text-xs font-medium text-gray-400">{logs.length} Log tercatat</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
-              <tr>
-                <th className="py-3 px-4">Waktu</th>
-                <th className="py-3 px-4">Personel</th>
-                <th className="py-3 px-4">Divisi</th>
-                <th className="py-3 px-4">Tipe Aksi</th>
-                <th className="py-3 px-4">Deskripsi Aktivitas</th>
-                <th className="py-3 px-4 text-center">Latency</th>
-                <th className="py-3 px-4 text-right">Payload</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-gray-700">
-              {logs.map((log) => {
-                const d = new Date(log.created_at);
-                const timeStr = !isNaN(d)
-                  ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                  : '-';
-                return (
-                  <tr key={log.id} className="hover:bg-gray-50 transition">
-                    <td className="py-3 px-4 font-mono text-gray-400 whitespace-nowrap">{timeStr}</td>
-                    <td className="py-3 px-4 font-semibold text-gray-900 whitespace-nowrap">
-                      {log.character_name}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getDivisionBadge(log.division)}`}>
-                        {log.division}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap capitalize text-gray-600">
-                      {log.action_type?.replace('_', ' ')}
-                    </td>
-                    <td className="py-3 px-4 text-gray-700 max-w-md">
-                      <p className="line-clamp-2">{log.summary}</p>
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono text-gray-500">
-                      {log.response_time_ms ? `${log.response_time_ms}ms` : '-'}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-gray-500">
-                      {log.tokens_used ? `${log.tokens_used} tok` : '-'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
     </Layout>
