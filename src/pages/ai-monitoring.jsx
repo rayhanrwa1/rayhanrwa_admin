@@ -2,41 +2,40 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import Layout from '../components/layout';
 import {
-  Users,
-  Activity,
-  Zap,
+  Calendar,
+  FileText,
   CheckCircle2,
   Clock,
-  Search,
-  RefreshCw,
-  Cpu,
-  Mail,
-  Phone,
-  MoreHorizontal,
-  FileText,
-  ChevronRight,
-  Send,
-  Check,
-  X,
   Radio,
-  ExternalLink,
-  MessageSquare,
+  Mail,
+  Share2,
+  Plus,
+  RefreshCw,
+  MoreHorizontal,
   Sparkles,
-  ArrowRight
+  Check,
+  Activity,
+  Cpu,
+  Paperclip,
+  MessageSquare,
+  ListFilter,
+  Send,
+  Users,
+  Compass,
+  Box,
+  Layers,
+  ArrowUpRight
 } from 'lucide-react';
 
 export default function AIMonitoring() {
   const [stats, setStats] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('ALL');
-  const [navTab, setNavTab] = useState('members'); // 'overview', 'members', 'telemetry', 'logs'
-  const [sidebarTab, setSidebarTab] = useState('activities'); // 'overview', 'activities'
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDivision, setFilterDivision] = useState('ALL');
   const [simulating, setSimulating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [selectedAgentName, setSelectedAgentName] = useState(null);
+  const [selectedDay, setSelectedDay] = useState('Mo');
 
   const fetchData = async () => {
     try {
@@ -70,12 +69,12 @@ export default function AIMonitoring() {
       setSimulating(true);
       const res = await api.post('/ai-traffic/simulate');
       const char = res.data?.data?.character_name || 'AI Staff';
-      setToastMessage(`Aktivitas baru dicatat: ${char} berhasil menyelesaikan instruksi.`);
+      setToastMessage(`Tugas baru berhasil disimulasikan untuk ${char}.`);
       setTimeout(() => setToastMessage(''), 4000);
       fetchData();
     } catch (err) {
       console.error(err);
-      setToastMessage('Gagal simulasi event.');
+      setToastMessage('Gagal simulasi tugas.');
       setTimeout(() => setToastMessage(''), 3000);
     } finally {
       setSimulating(false);
@@ -86,7 +85,7 @@ export default function AIMonitoring() {
     try {
       setSendingEmail(true);
       const res = await api.post('/ai-traffic/send-report', {
-        recipient_email: '', // Backend automatically extracts or defaults to Bos Rayhan's email
+        recipient_email: '',
         report_title: 'Executive AI Town Operations & Team Monitoring Report',
         notes: 'Laporan pemantauan performa seluruh agen AI Town dikirim langsung via Admin Dashboard.'
       });
@@ -112,18 +111,8 @@ export default function AIMonitoring() {
 
   const personas = stats?.character_traffic || [];
 
-  // Filter personas
   const filteredPersonas = personas.filter((p) => {
-    if (activeTab !== 'ALL' && p.division !== activeTab) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        p.name?.toLowerCase().includes(q) ||
-        p.role?.toLowerCase().includes(q) ||
-        p.division?.toLowerCase().includes(q) ||
-        p.recent_thought?.toLowerCase().includes(q)
-      );
-    }
+    if (filterDivision !== 'ALL' && p.division !== filterDivision) return false;
     return true;
   });
 
@@ -132,33 +121,45 @@ export default function AIMonitoring() {
     ? (personas.reduce((acc, curr) => acc + (curr.effectiveness_rate || 95.5), 0) / personas.length).toFixed(1)
     : '96.8';
 
-  // Selected agent (default to first or Ikhsan)
-  const currentAgent = personas.find(p => p.name === selectedAgentName) || personas[0] || {
-    name: 'Ikhsan',
-    division: 'IT',
-    role: 'Database & Security Admin',
-    status: 'working',
-    count: 133,
-    avg_response_ms: 361,
-    tokens_burned: 4417,
-    effectiveness_rate: 98.4,
-    recent_thought: 'Siap menerima instruksi dan menjalankan tugas divisi.'
+  // Greeting helper
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 11) return 'Good Morning';
+    if (hr < 15) return 'Good Afternoon';
+    if (hr < 19) return 'Good Evening';
+    return 'Good Night';
   };
 
-  const getDivisionBadge = (division) => {
-    switch (division) {
-      case 'IT':
-        return 'text-blue-700 bg-blue-50 border-blue-200';
-      case 'Financial':
-        return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-      case 'Marketing':
-        return 'text-amber-700 bg-amber-50 border-amber-200';
-      case 'Asisten Pribadi':
-        return 'text-purple-700 bg-purple-50 border-purple-200';
-      default:
-        return 'text-gray-700 bg-gray-50 border-gray-200';
-    }
+  // Get current date string formatted like screenshot: "Thursday, 20th February"
+  const getFormattedDate = () => {
+    const d = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const dayName = days[d.getDay()];
+    const monthName = months[d.getMonth()];
+    const dateNum = d.getDate();
+    const nth = (d) => {
+      if (d > 3 && d < 21) return 'th';
+      switch (d % 10) {
+        case 1: return 'st';
+        case 2: return 'nd';
+        case 3: return 'rd';
+        default: return 'th';
+      }
+    };
+    return `${dayName}, ${dateNum}${nth(dateNum)} ${monthName}`;
   };
+
+  // Weekdays for schedule
+  const weekDays = [
+    { key: 'Mo', day: 'Mo', date: 12 },
+    { key: 'Tu', day: 'Tu', date: 13 },
+    { key: 'We', day: 'We', date: 14 },
+    { key: 'Th', day: 'Th', date: 15 },
+    { key: 'Fr', day: 'Fr', date: 16 },
+    { key: 'Sa', day: 'Sa', date: 17 },
+    { key: 'Su', day: 'Su', date: 18 }
+  ];
 
   return (
     <Layout>
@@ -170,436 +171,379 @@ export default function AIMonitoring() {
         </div>
       )}
 
-      {/* Top Header / Breadcrumbs matching class style */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-400 mb-1">
-            <span className="hover:text-gray-600 cursor-pointer">AI Operations</span>
-            <span>&rsaquo;</span>
-            <span className="text-gray-700 font-semibold">{currentAgent.name}</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Team Performance & Monitoring
-          </h1>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-            <span>Created On: <strong className="text-gray-800 font-medium">Today, 12 Oct 2026</strong></span>
-            <span className="text-gray-300">•</span>
-            {/* Avatar group badge */}
-            <div className="flex items-center -space-x-1.5">
-              {personas.slice(0, 3).map((p, i) => (
-                <div
-                  key={i}
-                  className="w-5 h-5 rounded-full bg-gray-800 text-white text-[9px] font-bold flex items-center justify-center border border-white"
-                >
-                  {p.name.charAt(0)}
-                </div>
-              ))}
-              <span className="text-[10px] font-semibold text-gray-600 bg-gray-100 px-1 py-0.5 rounded-full border border-gray-200 ml-1">
-                +{personas.length}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons Top Right */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSendEmailReport}
-            disabled={sendingEmail}
-            className="px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 flex items-center gap-1.5 shadow-sm transition"
-          >
-            <Mail size={14} className={sendingEmail ? 'animate-bounce text-blue-600' : 'text-gray-500'} />
-            {sendingEmail ? 'Mengirim...' : 'Send Email Report'}
-          </button>
-          <button
-            onClick={handleSimulate}
-            disabled={simulating}
-            className="px-3.5 py-2 bg-black hover:bg-gray-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
-          >
-            <Radio size={14} className={simulating ? 'animate-pulse text-emerald-400' : ''} />
-            + Add Task Event
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Sub-Tabs matching reference (Details, Position, Documents, Assessment, Notes, etc.) */}
-      <div className="border-b border-gray-200 mb-6 flex items-center gap-8 text-xs font-medium text-gray-500 overflow-x-auto">
-        <button
-          onClick={() => setNavTab('members')}
-          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
-            navTab === 'members'
-              ? 'border-black text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
-          }`}
-        >
-          Staff Members ({personas.length})
-        </button>
-        <button
-          onClick={() => setNavTab('overview')}
-          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
-            navTab === 'overview'
-              ? 'border-black text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
-          }`}
-        >
-          Performance Matrix
-        </button>
-        <button
-          onClick={() => setNavTab('telemetry')}
-          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
-            navTab === 'telemetry'
-              ? 'border-black text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
-          }`}
-        >
-          DeepSeek Telemetry
-        </button>
-        <button
-          onClick={() => setNavTab('logs')}
-          className={`pb-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
-            navTab === 'logs'
-              ? 'border-black text-gray-900'
-              : 'border-transparent text-gray-500 hover:text-gray-800'
-          }`}
-        >
-          Live Logs ({logs.length})
-        </button>
-      </div>
-
-      {/* Main Split Layout matching reference screenshot */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN: Agent Dossier & Activities (3.5 cols) */}
-        <div className="lg:col-span-4 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          {/* Selected Agent Header */}
-          <div className="text-center pb-5 border-b border-gray-100">
-            <div className="relative inline-block mx-auto mb-3">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-gray-900 to-gray-700 text-white font-bold text-xl flex items-center justify-center border-2 border-white shadow-sm ring-1 ring-gray-200">
-                {currentAgent.name.charAt(0)}
-              </div>
-              <span className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"></span>
-            </div>
-
-            <h3 className="text-base font-bold text-gray-900">{currentAgent.name}</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Group | <span className="font-mono text-gray-700 font-medium">#{currentAgent.division.toUpperCase()}-{currentAgent.name.toUpperCase()}</span>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Top Header: Greeting + Actions matching reference screenshot */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <p className="text-xs text-gray-500 font-medium tracking-wide">
+              {getFormattedDate()}
             </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mt-1">
+              {getGreeting()}! Rayhan,
+            </h1>
 
-            {/* 3 Quick Action Buttons matching reference (Mail, Call, More) */}
-            <div className="flex items-center justify-center gap-3 mt-4">
-              <button
-                onClick={handleSendEmailReport}
-                title="Send email report for this agent"
-                className="w-10 h-10 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 flex items-center justify-center transition shadow-2xs"
-              >
-                <Mail size={18} />
-              </button>
-              <button
-                onClick={handleSimulate}
-                title="Trigger simulated task"
-                className="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 flex items-center justify-center transition shadow-2xs"
-              >
-                <Phone size={18} />
-              </button>
-              <button
-                onClick={fetchData}
-                title="Refresh telemetry"
-                className="w-10 h-10 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 flex items-center justify-center transition shadow-2xs"
-              >
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
-
-            <div className="text-[11px] text-gray-400 mt-3 font-medium flex items-center justify-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Last Activity: <strong className="text-gray-700 font-semibold">{currentAgent.last_active || 'Baru Saja'}</strong>
-            </div>
-          </div>
-
-          {/* Segmented Tab Switcher (Overview vs Activities) */}
-          <div className="flex border-b border-gray-200 mt-4">
-            <button
-              onClick={() => setSidebarTab('activities')}
-              className={`flex-1 py-2 text-center text-xs font-semibold transition border-b-2 ${
-                sidebarTab === 'activities'
-                  ? 'border-black text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-700'
-              }`}
-            >
-              Activities
-            </button>
-            <button
-              onClick={() => setSidebarTab('overview')}
-              className={`flex-1 py-2 text-center text-xs font-semibold transition border-b-2 ${
-                sidebarTab === 'overview'
-                  ? 'border-black text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-700'
-              }`}
-            >
-              Profile Info
-            </button>
-          </div>
-
-          {/* Tab Content: Activities Timeline */}
-          {sidebarTab === 'activities' ? (
-            <div className="pt-4 space-y-4">
-              {/* Timeline item 1 */}
-              <div className="flex items-start gap-3 relative">
-                <div className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-0.5">
-                  <MessageSquare size={13} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800">
-                    Instruksi Diterima dari Bos Rayhan
-                  </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">Hari ini • Sesi Telegram</p>
-                  <span className="inline-block mt-1.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    ✓ Accepted
-                  </span>
-                </div>
-              </div>
-
-              {/* Timeline item 2 */}
-              <div className="flex items-start gap-3 relative">
-                <div className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-0.5">
-                  <Activity size={13} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800">
-                    Eksekusi Tugas & Pemrosesan Log
-                  </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">Latency {currentAgent.avg_response_ms || 340}ms</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
-                      Active
-                    </span>
-                    <ArrowRight size={10} className="text-gray-400" />
-                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
-                      In progress
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Timeline item 3: Thought / Focus */}
-              <div className="flex items-start gap-3 relative">
-                <div className="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-0.5">
-                  <Sparkles size={13} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800">
-                    Status Pikiran & Fokus AI
-                  </p>
-                  <p className="text-[11px] text-gray-600 italic bg-gray-50 p-2 rounded-lg border border-gray-100 mt-1">
-                    "{currentAgent.recent_thought || 'Siap menerima instruksi dan menjalankan tugas divisi.'}"
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Tab Content: Profile Info */
-            <div className="pt-4 space-y-3 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-400">Divisi Kerja</span>
-                <span className={`font-semibold px-2 py-0.5 rounded border text-[11px] ${getDivisionBadge(currentAgent.division)}`}>
-                  {currentAgent.division}
+            {/* Pill Capsule Stat strip matching reference: ⏱ 12hrs Time Saved  ✓ 24 Projects Completed  ⌛ 7 Projects In-progress */}
+            <div className="mt-4 inline-flex flex-wrap items-center gap-4 sm:gap-6 bg-white border border-gray-200/90 rounded-full px-5 py-2.5 shadow-2xs text-xs text-gray-600">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-gray-400" />
+                <span>
+                  <strong className="text-gray-900 font-bold">320ms</strong> Latency Avg
                 </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-400">Peran & Tanggung Jawab</span>
-                <span className="font-semibold text-gray-900 text-right">{currentAgent.role}</span>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-gray-400" />
+                <span>
+                  <strong className="text-gray-900 font-bold">{stats?.total_activities || 706}</strong> Tasks Completed
+                </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-400">Total Tugas Selesai</span>
-                <span className="font-bold text-gray-900">{currentAgent.count || 0} Task</span>
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-purple-500" />
+                <span>
+                  <strong className="text-gray-900 font-bold">{avgEffectiveness}%</strong> Team Effectiveness
+                </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-400">Kecepatan Respons</span>
-                <span className="font-mono font-semibold text-gray-900">{currentAgent.avg_response_ms || 340} ms</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-400">Total Token Terpakai</span>
-                <span className="font-mono font-semibold text-gray-900">{(currentAgent.tokens_burned || 0).toLocaleString()} tok</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-gray-400">Efektivitas Kerja</span>
-                <span className="font-bold text-emerald-600">
-                  {currentAgent.effectiveness_rate ? currentAgent.effectiveness_rate.toFixed(1) : '95.5'}%
+              <div className="flex items-center gap-2">
+                <Users size={14} className="text-gray-400" />
+                <span>
+                  <strong className="text-gray-900 font-bold">{personas.length}</strong> AI Agents Active
                 </span>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Action buttons Top Right: Share / Send Report + Add Task */}
+          <div className="flex items-center gap-2.5 shrink-0 self-start">
+            <button
+              onClick={handleSendEmailReport}
+              disabled={sendingEmail}
+              className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 flex items-center gap-2 shadow-2xs transition"
+            >
+              <Share2 size={14} className={sendingEmail ? 'animate-spin text-blue-600' : 'text-gray-500'} />
+              <span>{sendingEmail ? 'Sending...' : 'Share Report'}</span>
+            </button>
+            <button
+              onClick={handleSimulate}
+              disabled={simulating}
+              className="px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition"
+            >
+              <Plus size={15} />
+              <span>{simulating ? 'Executing...' : 'Add Task'}</span>
+            </button>
+          </div>
         </div>
 
-        {/* RIGHT COLUMN: 3 Top KPI Cards + Clean Filter & Rows (8.5 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Top 3 KPI Metric Cards matching reference (Docs Owed [5], Docs Pending Reviews [4], Docs Accepted [12/13]) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Card 1: Team Effectiveness */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
-                  <Clock size={13} />
-                  <span>Team Effectiveness</span>
-                </div>
-                <div className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
-                  {avgEffectiveness}<span className="text-xl font-normal text-gray-400">%</span>
-                </div>
+        {/* Section 1: "My Projects / AI Team Tasks" Table Card */}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-2xs overflow-hidden">
+          {/* Card Header */}
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <span className="text-gray-400">☰</span>
+                <span>My Projects & AI Operations</span>
               </div>
-              <div className="mt-3 pt-2 flex items-center justify-between text-[11px] font-medium text-gray-500">
-                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                  Optimal
-                </span>
-                <span className="text-gray-700 font-semibold cursor-pointer flex items-center hover:underline">
-                  Go To Analytics &rsaquo;
-                </span>
-              </div>
-            </div>
 
-            {/* Card 2: Avg Latency */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
-                  <Activity size={13} />
-                  <span>Avg Response Latency</span>
-                </div>
-                <div className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
-                  320 <span className="text-base font-normal text-gray-400">ms</span>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 text-[11px] text-gray-400">
-                Throughput tinggi & stabil
-              </div>
-            </div>
-
-            {/* Card 3: Active Personnel */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
-                  <Users size={13} />
-                  <span>Agents On-Duty</span>
-                </div>
-                <div className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
-                  12 <span className="text-lg font-normal text-gray-400">/ 13</span>
-                </div>
-              </div>
-              <div className="mt-3 pt-2 text-[11px] text-gray-400">
-                Total {stats?.total_activities || 674} tugas terselesaikan
-              </div>
-            </div>
-          </div>
-
-          {/* Filter Bar & Action Strip matching reference (All Documents, Portal Milestones | + Add Template, etc.) */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-              {['ALL', 'IT', 'Financial', 'Marketing', 'Asisten Pribadi'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
-                    activeTab === tab
-                      ? 'bg-black text-white shadow-xs'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-                  }`}
+              {/* Filter Dropdown Pill */}
+              <div className="relative">
+                <select
+                  value={filterDivision}
+                  onChange={(e) => setFilterDivision(e.target.value)}
+                  className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 px-2.5 py-1 pr-6 cursor-pointer focus:outline-none transition appearance-none"
                 >
-                  {tab === 'ALL' ? `Semua Staf (${personas.length})` : tab}
-                </button>
-              ))}
+                  <option value="ALL">All Divisions ({personas.length})</option>
+                  <option value="IT">IT Division</option>
+                  <option value="Financial">Financial</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Asisten Pribadi">Executive Assistant</option>
+                </select>
+                <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">
+                  ▼
+                </div>
+              </div>
             </div>
 
-            {/* Search Input */}
-            <div className="relative w-full sm:w-60">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Cari anggota tim..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-gray-400 focus:bg-white transition"
-              />
+            <button
+              onClick={fetchData}
+              className="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-full text-xs font-medium transition flex items-center gap-1.5"
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {/* Table Header Row */}
+          <div className="grid grid-cols-12 px-5 py-3 text-xs font-medium text-gray-400 bg-gray-50/50 border-b border-gray-100">
+            <div className="col-span-6 flex items-center gap-1.5">
+              <span>✎</span>
+              <span>Task Name</span>
+            </div>
+            <div className="col-span-3 flex items-center gap-1.5">
+              <Users size={13} />
+              <span>Assign</span>
+            </div>
+            <div className="col-span-3 flex items-center gap-1.5">
+              <Sparkles size={13} />
+              <span>Status</span>
             </div>
           </div>
 
-          {/* List of Personnel Cards (Clean Row items matching Documents List from user screenshot) */}
-          <div className="space-y-2.5">
-            {filteredPersonas.map((person) => {
-              const isSelected = currentAgent.name === person.name;
+          {/* Table Body Rows */}
+          <div className="divide-y divide-gray-100 text-xs">
+            {filteredPersonas.slice(0, 7).map((person, index) => {
               const eff = person.effectiveness_rate ? person.effectiveness_rate.toFixed(1) : '95.0';
               const effNum = parseFloat(eff);
+
+              // Status styles matching screenshot pills
+              const getStatusPill = () => {
+                if (effNum >= 97.5) {
+                  return {
+                    label: 'In Progress',
+                    className: 'bg-emerald-100/90 text-emerald-800'
+                  };
+                } else if (effNum >= 96.0) {
+                  return {
+                    label: 'Completed',
+                    className: 'bg-blue-100/90 text-blue-800'
+                  };
+                } else {
+                  return {
+                    label: 'Pending',
+                    className: 'bg-purple-100/90 text-purple-800'
+                  };
+                }
+              };
+
+              const pill = getStatusPill();
+
+              // Icon for task
+              const getTaskIcon = () => {
+                if (person.division === 'IT') return <Compass size={14} className="text-gray-400" />;
+                if (person.division === 'Financial') return <Box size={14} className="text-gray-400" />;
+                return <Users size={14} className="text-gray-400" />;
+              };
 
               return (
                 <div
                   key={person.name}
-                  onClick={() => setSelectedAgentName(person.name)}
-                  className={`bg-white border rounded-xl p-3.5 flex items-center justify-between gap-4 cursor-pointer transition shadow-2xs hover:border-gray-400 ${
-                    isSelected ? 'border-black ring-1 ring-black bg-gray-50/50' : 'border-gray-200'
-                  }`}
+                  className="grid grid-cols-12 px-5 py-3.5 items-center hover:bg-gray-50/70 transition"
                 >
-                  {/* Left: Icon & Meta */}
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700 shrink-0 font-bold text-sm">
-                      {person.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-gray-900 truncate">{person.name}</h4>
-                        <span className={`text-[10px] font-semibold px-2 py-0.2 rounded border ${getDivisionBadge(person.division)}`}>
-                          {person.division}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-gray-400 mt-0.5 truncate">
-                        {person.role} • <span className="font-mono text-gray-600">{person.count || 0} tasks</span> • <span className="font-mono text-gray-600">{person.avg_response_ms || 340}ms</span> • <span className="font-mono text-gray-600">{(person.tokens_burned || 0).toLocaleString()} tok</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right: Score Pill & Action Buttons (Check, Close/Info, Dots) */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    {/* Unique Effectiveness Pill */}
-                    <div className="text-right">
-                      <span className={`text-xs font-bold px-2 py-1 rounded-md border ${
-                        effNum >= 97 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                        effNum >= 95 ? 'text-blue-700 bg-blue-50 border-blue-200' :
-                        'text-amber-700 bg-amber-50 border-amber-200'
-                      }`}>
-                        {eff}%
+                  {/* Col 1: Task Name + Chat & Paperclip icons */}
+                  <div className="col-span-6 flex items-center justify-between pr-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {getTaskIcon()}
+                      <span className="font-medium text-gray-800 truncate">
+                        {person.recent_thought && person.recent_thought.length > 5
+                          ? person.recent_thought
+                          : `Maintain & execute tasks for ${person.role}`}
                       </span>
                     </div>
 
-                    {/* Checkmark icon (circular dark background) */}
-                    <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center">
-                      <Check size={12} strokeWidth={3} />
+                    <div className="flex items-center gap-3 text-gray-400 shrink-0 ml-2">
+                      <div className="flex items-center gap-1">
+                        <MessageSquare size={12} />
+                        <span className="text-[11px] font-mono">{person.count || 7}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Paperclip size={12} />
+                        <span className="text-[11px] font-mono">{Math.floor((person.count || 10) / 4) + 1}</span>
+                      </div>
                     </div>
+                  </div>
 
-                    {/* Status Pill */}
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  {/* Col 2: Assignee (Avatar + Name) */}
+                  <div className="col-span-3 flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-gray-800 to-gray-600 text-white font-bold text-[10px] flex items-center justify-center border border-white shadow-2xs">
+                      {person.name.charAt(0)}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-900 block truncate">{person.name}</span>
+                      <span className="text-[10px] text-gray-400 block truncate">{person.division}</span>
+                    </div>
+                  </div>
 
-                    {/* Dots Menu */}
-                    <button className="text-gray-400 hover:text-gray-700 p-1">
-                      <MoreHorizontal size={14} />
-                    </button>
+                  {/* Col 3: Status Pill */}
+                  <div className="col-span-3 flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-[11px] font-semibold ${pill.className}`}>
+                      {pill.label}
+                    </span>
+
+                    <span className="text-[11px] font-mono text-gray-400 font-semibold hidden sm:inline">
+                      {eff}%
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
+        </div>
 
-          {/* DeepSeek Telemetry Strip */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-700">
-                <Cpu size={16} />
+        {/* Section 2: Bottom Two-Column Split (Schedule & Notes) matching reference screenshot */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {/* LEFT: Schedule Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <Calendar size={17} className="text-gray-500" />
+                <span>Schedule</span>
               </div>
-              <div>
-                <span className="font-bold text-gray-900">DeepSeek API Engine</span>
-                <span className="text-gray-400 ml-2">Saldo: <strong className="text-gray-900">${ds.topped_up_balance} {ds.currency}</strong></span>
-                <span className="text-gray-400 ml-2">Total Tokens: <strong className="text-gray-900">{(ds.total_tokens || 552515).toLocaleString()}</strong></span>
-              </div>
+              <button className="text-gray-400 hover:text-gray-700">
+                <MoreHorizontal size={16} />
+              </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="text-[11px] font-semibold text-emerald-700">100% Operational</span>
+            {/* Weekdays Strip */}
+            <div className="grid grid-cols-7 gap-1.5 text-center mb-5 pb-4 border-b border-gray-100">
+              {weekDays.map((item) => {
+                const isSelected = selectedDay === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setSelectedDay(item.key)}
+                    className={`p-2 rounded-xl text-xs transition flex flex-col items-center justify-center ${
+                      isSelected
+                        ? 'bg-purple-500 text-white font-bold shadow-xs'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className={`text-[10px] ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>
+                      {item.day}
+                    </span>
+                    <span className="text-sm font-semibold mt-0.5">{item.date}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Schedule Items List */}
+            <div className="space-y-3.5 text-xs">
+              {/* Item 1: Kickoff / Traffic Sync */}
+              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition">
+                <div className="flex items-start gap-3">
+                  <div className="w-1 h-9 rounded-full bg-emerald-500 shrink-0 mt-0.5"></div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
+                      <Clock size={12} className="text-gray-400" />
+                      Executive DeepSeek & AI Town Sync
+                    </h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5">09:00 AM to 10:30 AM</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center -space-x-1.5">
+                    <div className="w-5 h-5 rounded-full bg-gray-800 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                      R
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                      H
+                    </div>
+                  </div>
+                  <MoreHorizontal size={14} className="text-gray-300" />
+                </div>
+              </div>
+
+              {/* Item 2: Security & Database Routine */}
+              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition">
+                <div className="flex items-start gap-3">
+                  <div className="w-1 h-9 rounded-full bg-blue-500 shrink-0 mt-0.5"></div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
+                      <Cpu size={12} className="text-gray-400" />
+                      Postgres DB Connection Pool & SRE Check
+                    </h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5">01:00 PM to 02:30 PM</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center -space-x-1.5">
+                    <div className="w-5 h-5 rounded-full bg-emerald-700 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                      I
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-amber-600 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                      A
+                    </div>
+                  </div>
+                  <MoreHorizontal size={14} className="text-gray-300" />
+                </div>
+              </div>
+
+              {/* Item 3: Automated Email Report Trigger */}
+              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition">
+                <div className="flex items-start gap-3">
+                  <div className="w-1 h-9 rounded-full bg-purple-500 shrink-0 mt-0.5"></div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
+                      <Mail size={12} className="text-gray-400" />
+                      Executive Report Dispatch to Bos Email
+                    </h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5">04:00 PM to 05:00 PM</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center -space-x-1.5">
+                    <div className="w-5 h-5 rounded-full bg-gray-800 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                      R
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-purple-700 text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                      L
+                    </div>
+                  </div>
+                  <MoreHorizontal size={14} className="text-gray-300" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: Notes Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-base font-bold text-gray-900">
+                <FileText size={17} className="text-gray-500" />
+                <span>Notes & AI Focus</span>
+              </div>
+              <button className="text-xs text-gray-400 font-medium hover:text-gray-700">
+                Clear
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Note item 1 */}
+              <div className="flex items-start gap-3 pb-3 border-b border-gray-100">
+                <div className="w-4 h-4 rounded-full border border-gray-300 shrink-0 mt-0.5"></div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">Optimalisasi Token & Caching DeepSeek</h4>
+                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                    Saldo DeepSeek saat ini ${ds.topped_up_balance} {ds.currency} dengan total {(ds.total_tokens || 552515).toLocaleString()} tokens digunakan secara efisien oleh tim otonom.
+                  </p>
+                </div>
+              </div>
+
+              {/* Note item 2 */}
+              <div className="flex items-start gap-3 pb-3 border-b border-gray-100">
+                <div className="w-4 h-4 rounded-full border border-gray-300 shrink-0 mt-0.5"></div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">Monitoring Template Email Bos</h4>
+                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
+                    Template laporan otomatis berlogo resmi dan berfooter portofolio Bos siap dikirimkan melalui Telegram trigger atau tombol Share Report di atas.
+                  </p>
+                </div>
+              </div>
+
+              {/* Note item 3: Checked */}
+              <div className="flex items-start gap-3">
+                <div className="w-4 h-4 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <Check size={10} strokeWidth={3} />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 line-through text-gray-400">
+                    Audit Kecepatan Respons & Efektivitas Staf
+                  </h4>
+                  <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                    Semua 13 anggota kantor telah terkalibrasi dengan skor efektivitas dinamis berdasarkan latency, throughput, dan bobot divisi.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
