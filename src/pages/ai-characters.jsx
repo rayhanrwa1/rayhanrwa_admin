@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import Layout from '../components/layout';
-import { Users, Edit2, Loader2, Bot, MapPin } from 'lucide-react';
+import { Users, Edit2, Loader2, Bot, MapPin, Heart } from 'lucide-react';
 
 export default function AICharacters() {
   const [items, setItems] = useState([]);
+  const [romancePairs, setRomancePairs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [romanceLoading, setRomanceLoading] = useState(true);
+  const [romanceError, setRomanceError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     division: '',
@@ -20,6 +23,12 @@ export default function AICharacters() {
 
   useEffect(() => {
     fetchItems();
+    fetchRomance();
+    const interval = setInterval(() => {
+      fetchItems();
+      fetchRomance();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchItems = async () => {
@@ -38,6 +47,20 @@ export default function AICharacters() {
       setError('Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRomance = async () => {
+    try {
+      setRomanceLoading(true);
+      const res = await api.get('/ai_characters/romance');
+      setRomancePairs(Array.isArray(res.data?.data) ? res.data.data : []);
+      setRomanceError('');
+    } catch (err) {
+      console.error('Error fetching AI character romance monitoring', err);
+      setRomanceError(err.response?.data?.error || 'Monitoring romansa belum dapat dimuat.');
+    } finally {
+      setRomanceLoading(false);
     }
   };
 
@@ -111,6 +134,70 @@ export default function AICharacters() {
           <p className="text-sm text-gray-500 mt-1">Daftar 13 staf virtual kantor RayhanRWA Journey beserta peran dan jobdesk spesifik.</p>
         </div>
       </div>
+
+      <section className="bg-white rounded-xl shadow-sm border border-rose-100 overflow-hidden mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-5 border-b border-gray-100">
+          <div>
+            <h2 className="font-bold text-gray-900 flex items-center gap-2">
+              <Heart className="w-5 h-5 text-rose-500" /> Monitoring perasaan karakter
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Dinamika romansa roleplay fiksi antar persona AI; diperbarui otomatis tiap 30 detik.
+            </p>
+          </div>
+          <span className="text-xs text-gray-500">
+            {romancePairs.length} dinamika terpantau
+          </span>
+        </div>
+
+        {romanceError ? (
+          <div className="m-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+            {romanceError} Jalankan migrasi `016_ai_character_dynamics.sql` dan pastikan server sudah diperbarui.
+          </div>
+        ) : romanceLoading && romancePairs.length === 0 ? (
+          <div className="p-8 flex justify-center">
+            <Loader2 className="animate-spin text-gray-400" size={24} />
+          </div>
+        ) : romancePairs.length === 0 ? (
+          <div className="p-6 text-sm text-gray-500">
+            Belum ada karakter yang menunjukkan ketertarikan. Perasaan berkembang bertahap melalui obrolan otomatis.
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {romancePairs.map((pair) => (
+              <div key={`${pair.character_a}-${pair.character_b}`} className="px-6 py-4 grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto] items-center gap-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="font-medium text-gray-800">{pair.character_a} → {pair.character_b}</span>
+                    <span className="text-rose-600 font-semibold">{pair.a_to_b}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-rose-400 rounded-full transition-all" style={{ width: `${Math.min(100, pair.a_to_b)}%` }} />
+                  </div>
+                </div>
+                <Heart className={`w-4 h-4 mx-auto ${pair.a_to_b >= 60 && pair.b_to_a >= 60 ? 'text-rose-500 fill-rose-500' : 'text-rose-300'}`} />
+                <div>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="font-medium text-gray-800">{pair.character_b} → {pair.character_a}</span>
+                    <span className="text-rose-600 font-semibold">{pair.b_to_a}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-pink-400 rounded-full transition-all" style={{ width: `${Math.min(100, pair.b_to_a)}%` }} />
+                  </div>
+                </div>
+                <div className="md:text-right">
+                  <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 capitalize">
+                    {pair.status}
+                  </span>
+                  <div className="text-[10px] text-gray-400 mt-1">
+                    {pair.updated_at ? new Date(pair.updated_at).toLocaleString('id-ID') : ''}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
