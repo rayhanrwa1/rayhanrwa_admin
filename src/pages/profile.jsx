@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { uploadFile } from '../utils/upload';
 import Layout from '../components/layout';
-import { Plus, ArrowLeft, Save, Trash2, Loader2, Image as ImageIcon, Upload, X, User, Mail, Phone, Briefcase, Sparkles, Images } from 'lucide-react';
+import { Plus, ArrowLeft, Save, Trash2, Loader2, Image as ImageIcon, Upload, X, User, Mail, Phone, Briefcase, Sparkles, Images, FileText, Download } from 'lucide-react';
 
 const emptyForm = {
   name: "", role: "", tagline: "",
   bio: "", bio_en: "", bio_id: "",
   email: "", phone: "",
-  photos: []
+  photos: [],
+  resume_url: ""
 };
 
 export default function Profile() {
@@ -20,6 +21,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('en');
+  const [uploadingResume, setUploadingResume] = useState(false);
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -59,6 +61,35 @@ export default function Profile() {
     const newPhotos = [...formData.photos];
     newPhotos.splice(index, 1);
     setFormData(prev => ({ ...prev, photos: newPhotos }));
+  };
+
+  const handleResumeUpload = async (file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Pilih file CV berformat PDF.');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Ukuran PDF CV maksimal 15 MB.');
+      return;
+    }
+    setUploadingResume(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.post('/upload/resume', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = response.data?.data?.url;
+      if (!url) throw new Error('Server tidak mengembalikan URL file CV.');
+      setFormData((current) => ({ ...current, resume_url: url }));
+    } catch (uploadError) {
+      console.error('Failed to upload resume PDF', uploadError);
+      setError(uploadError.response?.data?.message || uploadError.message || 'Gagal mengunggah file CV.');
+    } finally {
+      setUploadingResume(false);
+    }
   };
 
   // ── Open edit ───────────────────────────────────────────────────────────────
@@ -165,9 +196,9 @@ export default function Profile() {
               <p className="text-xs text-gray-400 mt-0.5">{editingId ? `Editing ID: ${editingId}` : 'Create a new profile entry'}</p>
             </div>
           </div>
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors cursor-pointer">
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            {saving ? 'Saving...' : 'Save Profile'}
+          <button onClick={handleSave} disabled={saving || uploadingResume} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition-colors cursor-pointer">
+            {saving || uploadingResume ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+            {uploadingResume ? 'Uploading CV...' : saving ? 'Saving...' : 'Save Profile'}
           </button>
         </div>
 
@@ -200,6 +231,33 @@ export default function Profile() {
                   <label className="text-xs text-gray-500 mb-1.5 font-medium flex items-center gap-1"><Phone size={11} /> Phone</label>
                   <input type="text" value={formData.phone || ''} onChange={e => f('phone', e.target.value)} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-black" placeholder="+62..." />
                 </div>
+              </div>
+              <div className="mt-6 border-t border-gray-100 pt-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800"><FileText size={16} /> Downloadable CV (PDF)</h4>
+                    <p className="mt-1 text-xs text-gray-500">PDF up to 15 MB. A download button will appear in the website hero.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {formData.resume_url && (
+                      <>
+                        <a href={formData.resume_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                          <Download size={14} /> View PDF
+                        </a>
+                        <button type="button" onClick={() => f('resume_url', '')} className="rounded-lg px-2 py-2 text-xs font-semibold text-red-600 hover:bg-red-50">Remove</button>
+                      </>
+                    )}
+                    <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 ${uploadingResume ? 'pointer-events-none opacity-60' : ''}`}>
+                      {uploadingResume ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {uploadingResume ? 'Uploading...' : formData.resume_url ? 'Replace PDF' : 'Upload PDF'}
+                      <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={uploadingResume} onChange={(event) => {
+                        handleResumeUpload(event.target.files?.[0]);
+                        event.target.value = '';
+                      }} />
+                    </label>
+                  </div>
+                </div>
+                {formData.resume_url && <p className="mt-2 truncate text-xs text-green-700">PDF uploaded and ready to save with this profile.</p>}
               </div>
             </div>
 
