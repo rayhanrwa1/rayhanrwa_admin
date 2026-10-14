@@ -27,6 +27,7 @@ import Integrations from './pages/integrations';
 import AICharacters from './pages/ai-characters';
 import AIMonitoring from './pages/ai-monitoring';
 import SystemLogs from './pages/system-logs';
+import CVBuilder from './pages/cv-builder';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
         <Route path="/visitors" element={<Visitors />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/cv-builder" element={<CVBuilder />} />
         <Route path="/journal" element={<Journal />} />
         <Route path="/archive-tracks" element={<ArchiveTracks />} />
         <Route path="/core-stack" element={<CoreStack />} />

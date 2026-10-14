@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import api from '../utils/api';
 import {
   SquaresFour, User, Article, MusicNotes, Code, ChartBar,
-  Quotes, Certificate, Camera, Image, ShareNetwork, Link,
+  Quotes, Certificate, Camera, Image, ShareNetwork, Link, FileText,
   PaintBrush, VideoCamera, SignOut, Key
 } from '@phosphor-icons/react';
 import { X, Loader2, ChevronLeft, ChevronRight, ChevronDown, Globe, Server, Link2, Users, Activity, Terminal } from 'lucide-react';
@@ -121,6 +121,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       title: 'JOURNEY & PROJECT',
       items: [
         { name: 'Profile', path: '/profile', icon: <User size={18} /> },
+        { name: 'CV Builder', path: '/cv-builder', icon: <FileText size={18} /> },
         { name: 'Stats', path: '/stats', icon: <ChartBar size={18} /> },
         { name: 'Projects', path: '/projects', icon: <PaintBrush size={18} /> }
       ]
