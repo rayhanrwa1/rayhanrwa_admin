@@ -67,7 +67,20 @@ function getCVRequestError(error, action) {
     return `API CV tidak ditemukan saat ${action} (404). Backend online belum diperbarui; deploy backend terbaru.`;
   }
   if (status >= 500) {
-    return `Server gagal ${action}. Pastikan migrasi CV sudah diterapkan dan periksa log backend.`;
+    const response = error.response?.data;
+    const detail = typeof response?.data === 'string'
+      ? response.data
+      : typeof response?.data?.error === 'string'
+        ? response.data.error
+        : '';
+    const message = typeof response?.message === 'string' ? response.message : `Server gagal ${action}.`;
+    if (/relation ["']?cv_resumes["']? does not exist/i.test(detail)) {
+      return 'Tabel CV belum tersedia di database. Jalankan migrasi 017_cv_resumes.sql.';
+    }
+    if (/column ["']?font_family["']? does not exist/i.test(detail)) {
+      return 'Database CV belum diperbarui. Jalankan migrasi 018_cv_templates_and_fonts.sql.';
+    }
+    return detail ? `${message} Detail: ${detail}` : `${message} Periksa log backend untuk mengetahui penyebabnya.`;
   }
   if (!error.response) return `Tidak dapat terhubung ke server API saat ${action}. Periksa koneksi dan URL API.`;
   return error.response.data?.message || error.message || `Gagal ${action}.`;
@@ -143,17 +156,18 @@ function getResumeDensity(resume) {
   return 1;
 }
 
-function ResumePreview({ resume }) {
+function ResumePreview({ resume, fontSize }) {
   const template = resume.template || 'ats_classic';
   const font = fonts.find((option) => option.id === resume.font_family)?.family || fonts[0].family;
   const density = getResumeDensity(resume);
+  const bodySize = Math.max(8, fontSize * density);
   const pageStyle = {
     fontFamily: font,
-    '--cv-body-size': `${Math.max(9.5, 11 * density)}px`,
-    '--cv-small-size': `${Math.max(8.5, 9.5 * density)}px`,
-    '--cv-entry-size': `${Math.max(10, 11.5 * density)}px`,
-    '--cv-section-size': `${Math.max(9.5, 10.5 * density)}px`,
-    '--cv-name-size': `${Math.max(20, 24 * density)}px`,
+    '--cv-body-size': `${bodySize}px`,
+    '--cv-small-size': `${Math.max(8, bodySize * 0.86)}px`,
+    '--cv-entry-size': `${Math.max(9, bodySize * 1.05)}px`,
+    '--cv-section-size': `${Math.max(8.5, bodySize * 0.95)}px`,
+    '--cv-name-size': `${Math.max(18, bodySize * 2.18)}px`,
   };
   const contact = [resume.location, resume.phone, resume.email, resume.website, resume.linkedin].filter(Boolean);
   const dateRange = (start, end) => [start, end].filter(Boolean).join(' – ');
@@ -258,7 +272,7 @@ function ResumePreview({ resume }) {
 
   return (
     <article
-      className={`cv-print-area cv-body-text mx-auto aspect-[210/297] w-full max-w-[794px] bg-white px-6 py-7 leading-[1.25] text-gray-800 sm:px-9 sm:py-9 ${template === 'ats_academic' || template === 'ats_executive' ? 'font-serif' : ''}`}
+      className={`cv-print-area cv-body-text mx-auto bg-white px-6 py-7 leading-[1.25] text-gray-800 sm:px-9 sm:py-9 ${template === 'ats_academic' || template === 'ats_executive' ? 'font-serif' : ''}`}
       style={pageStyle}
     >
       <header className={`break-inside-avoid ${headerStyle}`}>
@@ -455,6 +469,7 @@ export default function CVBuilder() {
   const [targetRole, setTargetRole] = useState('');
   const [draftLanguage, setDraftLanguage] = useState('id');
   const [generatedDraft, setGeneratedDraft] = useState(null);
+  const [previewFontSize, setPreviewFontSize] = useState(11);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -590,6 +605,13 @@ export default function CVBuilder() {
       <style>{`
         .cv-print-area {
           box-sizing: border-box;
+          width: 794px;
+          height: 1123px;
+          max-width: none;
+          column-count: 1;
+          column-gap: 24px;
+          column-fill: auto;
+          column-rule: 1px solid #d1d5db;
         }
         .cv-print-area.cv-body-text {
           font-size: var(--cv-body-size) !important;
@@ -625,6 +647,10 @@ export default function CVBuilder() {
             margin: 0 !important;
             box-shadow: none !important;
             box-sizing: border-box !important;
+            column-count: auto !important;
+            column-gap: normal !important;
+            column-fill: auto !important;
+            column-rule: none !important;
           }
         }
       `}</style>
@@ -872,14 +898,28 @@ export default function CVBuilder() {
             <div className="mb-3 flex items-center justify-between print:hidden">
               <div>
                 <h2 className="font-semibold text-gray-900">Pratinjau langsung</h2>
-                <p className="text-xs text-gray-500">Format satu kolom yang ramah ATS</p>
+                <p className="text-xs text-gray-500">Halaman A4 · ukuran font {previewFontSize}px</p>
               </div>
+              <label className="flex items-center gap-2 text-xs text-gray-600">
+                <span>Font</span>
+                <input
+                  type="range"
+                  min="9"
+                  max="16"
+                  step="0.5"
+                  value={previewFontSize}
+                  onChange={(event) => setPreviewFontSize(Number(event.target.value))}
+                  aria-label="Ukuran font pratinjau"
+                  className="w-24 accent-blue-700"
+                />
+                <span className="w-8 text-right tabular-nums">{previewFontSize}px</span>
+              </label>
               <button type="button" onClick={printResume} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
                 <DownloadSimple size={15} /> Cetak / PDF
               </button>
             </div>
             <div className="overflow-auto rounded-xl bg-gray-100 p-3 sm:p-5 print:overflow-visible print:bg-white print:p-0">
-              <ResumePreview resume={resume} />
+              <ResumePreview resume={resume} fontSize={previewFontSize} />
             </div>
           </section>
         </form>
