@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock,
   Radio,
-  Mail,
   Share2,
   Plus,
   RefreshCw,
@@ -15,7 +14,6 @@ import {
   Sparkles,
   Check,
   Activity,
-  Cpu,
   Paperclip,
   MessageSquare,
   ListFilter,
@@ -28,6 +26,8 @@ import {
 } from 'lucide-react';
 
 export default function AIMonitoring() {
+  const scheduleStorageKey = 'ai-monitoring-schedule-v1';
+  const notesStorageKey = 'ai-monitoring-notes-v1';
   const [stats, setStats] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,30 @@ export default function AIMonitoring() {
   const [simulating, setSimulating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [selectedDay, setSelectedDay] = useState('Mo');
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [schedules, setSchedules] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(scheduleStorageKey) || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [notes, setNotes] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(notesStorageKey) || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({
+    title: '',
+    date: new Date().toLocaleDateString('en-CA'),
+    time: '09:00',
+    character: 'Bayu',
+    focus: 'Website'
+  });
+  const [noteForm, setNoteForm] = useState({ title: '', detail: '', character: 'Bayu', focus: 'Website' });
 
   const fetchData = async () => {
     try {
@@ -63,6 +86,14 @@ export default function AIMonitoring() {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(scheduleStorageKey, JSON.stringify(schedules));
+  }, [schedules]);
+
+  useEffect(() => {
+    localStorage.setItem(notesStorageKey, JSON.stringify(notes));
+  }, [notes]);
 
   const handleSimulate = async () => {
     try {
@@ -99,14 +130,6 @@ export default function AIMonitoring() {
     } finally {
       setSendingEmail(false);
     }
-  };
-
-  const ds = stats?.deepseek || {
-    topped_up_balance: '9.86',
-    currency: 'USD',
-    total_cost_usd: 0.13,
-    api_requests: 1917,
-    total_tokens: 552515
   };
 
   const personas = stats?.character_traffic || [];
@@ -150,16 +173,38 @@ export default function AIMonitoring() {
     return `${dayName}, ${dateNum}${nth(dateNum)} ${monthName}`;
   };
 
-  // Weekdays for schedule
-  const weekDays = [
-    { key: 'Mo', day: 'Mo', date: 12 },
-    { key: 'Tu', day: 'Tu', date: 13 },
-    { key: 'We', day: 'We', date: 14 },
-    { key: 'Th', day: 'Th', date: 15 },
-    { key: 'Fr', day: 'Fr', date: 16 },
-    { key: 'Sa', day: 'Sa', date: 17 },
-    { key: 'Su', day: 'Su', date: 18 }
-  ];
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7) + index);
+    return {
+      key: date.toLocaleDateString('en-CA'),
+      day: date.toLocaleDateString('id-ID', { weekday: 'short' }),
+      date: date.getDate()
+    };
+  });
+  const selectedSchedules = schedules
+    .filter((schedule) => schedule.date === selectedDate)
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const focusOptions = ['Website', 'Database (non-Firebase)', 'GitHub repositories'];
+  const characterOptions = ['Bayu', 'Lutfi', 'Naufal', 'Rayangga', 'Ikhsan', 'Awik', 'Hamda', 'Hanai'];
+
+  const saveSchedule = (event) => {
+    event.preventDefault();
+    if (!scheduleForm.title.trim()) return;
+    setSchedules((current) => [...current, { ...scheduleForm, id: crypto.randomUUID() }]);
+    setSelectedDate(scheduleForm.date);
+    setScheduleForm((current) => ({ ...current, title: '' }));
+    setShowScheduleForm(false);
+    setToastMessage('Jadwal berhasil disimpan.');
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const saveNote = (event) => {
+    event.preventDefault();
+    if (!noteForm.title.trim() || !noteForm.detail.trim()) return;
+    setNotes((current) => [...current, { ...noteForm, id: crypto.randomUUID(), done: false }]);
+    setNoteForm((current) => ({ ...current, title: '', detail: '' }));
+  };
 
   return (
     <Layout>
@@ -385,19 +430,64 @@ export default function AIMonitoring() {
                 <Calendar size={17} className="text-gray-500" />
                 <span>Schedule</span>
               </div>
-              <button className="text-gray-400 hover:text-gray-700">
-                <MoreHorizontal size={16} />
+              <button
+                onClick={() => setShowScheduleForm((value) => !value)}
+                className="text-xs font-semibold text-purple-700 hover:text-purple-900 flex items-center gap-1"
+              >
+                <Plus size={15} /> Add schedule
               </button>
             </div>
 
-            {/* Weekdays Strip */}
+            {showScheduleForm && (
+              <form onSubmit={saveSchedule} className="mb-4 p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2">
+                <input
+                  required
+                  value={scheduleForm.title}
+                  onChange={(event) => setScheduleForm({ ...scheduleForm, title: event.target.value })}
+                  placeholder="Task / agenda"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    required
+                    type="date"
+                    value={scheduleForm.date}
+                    onChange={(event) => setScheduleForm({ ...scheduleForm, date: event.target.value })}
+                    className="min-w-0 px-2 py-2 rounded-lg border border-gray-200 text-xs"
+                  />
+                  <input
+                    required
+                    type="time"
+                    value={scheduleForm.time}
+                    onChange={(event) => setScheduleForm({ ...scheduleForm, time: event.target.value })}
+                    className="min-w-0 px-2 py-2 rounded-lg border border-gray-200 text-xs"
+                  />
+                  <select
+                    value={scheduleForm.character}
+                    onChange={(event) => setScheduleForm({ ...scheduleForm, character: event.target.value })}
+                    className="px-2 py-2 rounded-lg border border-gray-200 text-xs"
+                  >
+                    {characterOptions.map((character) => <option key={character}>{character}</option>)}
+                  </select>
+                  <select
+                    value={scheduleForm.focus}
+                    onChange={(event) => setScheduleForm({ ...scheduleForm, focus: event.target.value })}
+                    className="px-2 py-2 rounded-lg border border-gray-200 text-xs"
+                  >
+                    {focusOptions.map((focus) => <option key={focus}>{focus}</option>)}
+                  </select>
+                </div>
+                <button type="submit" className="px-3 py-2 rounded-lg bg-black text-white text-xs font-semibold">Save schedule</button>
+              </form>
+            )}
+
             <div className="grid grid-cols-7 gap-1.5 text-center mb-5 pb-4 border-b border-gray-100">
               {weekDays.map((item) => {
-                const isSelected = selectedDay === item.key;
+                const isSelected = selectedDate === item.key;
                 return (
                   <button
                     key={item.key}
-                    onClick={() => setSelectedDay(item.key)}
+                    onClick={() => setSelectedDate(item.key)}
                     className={`p-2 rounded-xl text-xs transition flex flex-col items-center justify-center ${isSelected
                       ? 'bg-purple-500 text-white font-bold shadow-xs'
                       : 'text-gray-600 hover:bg-gray-100'
@@ -412,85 +502,30 @@ export default function AIMonitoring() {
               })}
             </div>
 
-            {/* Schedule Items List */}
             <div className="space-y-3.5 text-xs">
-              {/* Item 1: Kickoff / Traffic Sync */}
-              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition">
-                <div className="flex items-start gap-3">
-                  <div className="w-1 h-9 rounded-full bg-emerald-500 shrink-0 mt-0.5"></div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
-                      <Clock size={12} className="text-gray-400" />
-                      Executive DeepSeek & AI Town Sync
-                    </h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5">09:00 AM to 10:30 AM</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center -space-x-1.5">
-                    <div className="w-5 h-5 rounded-full bg-gray-800 text-white text-[9px] font-bold flex items-center justify-center border border-white">
-                      R
-                    </div>
-                    <div className="w-5 h-5 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center border border-white">
-                      H
+              {selectedSchedules.length === 0 && (
+                <p className="py-5 text-center text-[11px] text-gray-400">No schedule for this date. Add an agenda and assign an AI character.</p>
+              )}
+              {selectedSchedules.map((schedule) => (
+                <div key={schedule.id} className="flex items-center justify-between gap-2 p-2 hover:bg-gray-50 rounded-xl transition">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-1 h-9 rounded-full bg-purple-500 shrink-0 mt-0.5"></div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-1.5 truncate">
+                        <Clock size={12} className="text-gray-400 shrink-0" /> {schedule.title}
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{schedule.time} · {schedule.character} · {schedule.focus}</p>
                     </div>
                   </div>
-                  <MoreHorizontal size={14} className="text-gray-300" />
+                  <button
+                    onClick={() => setSchedules((current) => current.filter((item) => item.id !== schedule.id))}
+                    className="text-gray-300 hover:text-red-500 p-1"
+                    aria-label={`Delete ${schedule.title}`}
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
                 </div>
-              </div>
-
-              {/* Item 2: Security & Database Routine */}
-              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition">
-                <div className="flex items-start gap-3">
-                  <div className="w-1 h-9 rounded-full bg-blue-500 shrink-0 mt-0.5"></div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
-                      <Cpu size={12} className="text-gray-400" />
-                      Postgres DB Connection Pool & SRE Check
-                    </h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5">01:00 PM to 02:30 PM</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center -space-x-1.5">
-                    <div className="w-5 h-5 rounded-full bg-emerald-700 text-white text-[9px] font-bold flex items-center justify-center border border-white">
-                      I
-                    </div>
-                    <div className="w-5 h-5 rounded-full bg-amber-600 text-white text-[9px] font-bold flex items-center justify-center border border-white">
-                      A
-                    </div>
-                  </div>
-                  <MoreHorizontal size={14} className="text-gray-300" />
-                </div>
-              </div>
-
-              {/* Item 3: Automated Email Report Trigger */}
-              <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition">
-                <div className="flex items-start gap-3">
-                  <div className="w-1 h-9 rounded-full bg-purple-500 shrink-0 mt-0.5"></div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
-                      <Mail size={12} className="text-gray-400" />
-                      Executive Report Dispatch to Bos Email
-                    </h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5">04:00 PM to 05:00 PM</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center -space-x-1.5">
-                    <div className="w-5 h-5 rounded-full bg-gray-800 text-white text-[9px] font-bold flex items-center justify-center border border-white">
-                      R
-                    </div>
-                    <div className="w-5 h-5 rounded-full bg-purple-700 text-white text-[9px] font-bold flex items-center justify-center border border-white">
-                      L
-                    </div>
-                  </div>
-                  <MoreHorizontal size={14} className="text-gray-300" />
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -501,48 +536,76 @@ export default function AIMonitoring() {
                 <FileText size={17} className="text-gray-500" />
                 <span>Notes & AI Focus</span>
               </div>
-              <button className="text-xs text-gray-400 font-medium hover:text-gray-700">
+              <button
+                onClick={() => setNotes([])}
+                className="text-xs text-gray-400 font-medium hover:text-gray-700"
+                disabled={notes.length === 0}
+              >
                 Clear
               </button>
             </div>
 
+            <form onSubmit={saveNote} className="mb-4 p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2">
+              <input
+                required
+                value={noteForm.title}
+                onChange={(event) => setNoteForm({ ...noteForm, title: event.target.value })}
+                placeholder="AI focus / task"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs"
+              />
+              <textarea
+                required
+                value={noteForm.detail}
+                onChange={(event) => setNoteForm({ ...noteForm, detail: event.target.value })}
+                placeholder="What should the AI discuss or work on?"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs resize-y"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={noteForm.character}
+                  onChange={(event) => setNoteForm({ ...noteForm, character: event.target.value })}
+                  className="px-2 py-2 rounded-lg border border-gray-200 text-xs"
+                >
+                  {characterOptions.map((character) => <option key={character}>{character}</option>)}
+                </select>
+                <select
+                  value={noteForm.focus}
+                  onChange={(event) => setNoteForm({ ...noteForm, focus: event.target.value })}
+                  className="px-2 py-2 rounded-lg border border-gray-200 text-xs"
+                >
+                  {focusOptions.map((focus) => <option key={focus}>{focus}</option>)}
+                </select>
+              </div>
+              <button type="submit" className="px-3 py-2 rounded-lg bg-black text-white text-xs font-semibold">Add AI focus</button>
+              <p className="text-[10px] text-gray-400">Firebase is excluded. GitHub actions use only the repository configured on the server.</p>
+            </form>
+
             <div className="space-y-4 text-xs">
-              {/* Note item 1 */}
-              <div className="flex items-start gap-3 pb-3 border-b border-gray-100">
-                <div className="w-4 h-4 rounded-full border border-gray-300 shrink-0 mt-0.5"></div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Optimalisasi Token & Caching DeepSeek</h4>
-                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                    Saldo DeepSeek saat ini ${ds.topped_up_balance} {ds.currency} dengan total {(ds.total_tokens || 552515).toLocaleString()} tokens digunakan secara efisien oleh tim otonom.
-                  </p>
+              {notes.length === 0 && <p className="py-3 text-center text-[11px] text-gray-400">No AI focus notes yet.</p>}
+              {notes.map((note) => (
+                <div key={note.id} className="flex items-start gap-3 pb-3 border-b border-gray-100">
+                  <button
+                    onClick={() => setNotes((current) => current.map((item) => item.id === note.id ? { ...item, done: !item.done } : item))}
+                    className={`w-4 h-4 rounded-full border shrink-0 mt-0.5 flex items-center justify-center ${note.done ? 'bg-purple-500 border-purple-500 text-white' : 'border-gray-300'}`}
+                    aria-label={note.done ? 'Mark focus as active' : 'Mark focus as done'}
+                  >
+                    {note.done && <Check size={10} strokeWidth={3} />}
+                  </button>
+                  <div className="min-w-0">
+                    <h4 className={`font-semibold ${note.done ? 'line-through text-gray-400' : 'text-gray-900'}`}>{note.title}</h4>
+                    <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{note.detail}</p>
+                    <p className="text-[10px] text-purple-700 mt-1">{note.character} · {note.focus}</p>
+                  </div>
+                  <button
+                    onClick={() => setNotes((current) => current.filter((item) => item.id !== note.id))}
+                    className="ml-auto text-gray-300 hover:text-red-500"
+                    aria-label={`Delete ${note.title}`}
+                  >
+                    ×
+                  </button>
                 </div>
-              </div>
-
-              {/* Note item 2 */}
-              <div className="flex items-start gap-3 pb-3 border-b border-gray-100">
-                <div className="w-4 h-4 rounded-full border border-gray-300 shrink-0 mt-0.5"></div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Monitoring Template Email Bos</h4>
-                  <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">
-                    Template laporan otomatis berlogo resmi dan berfooter portofolio Bos siap dikirimkan melalui Telegram trigger atau tombol Share Report di atas.
-                  </p>
-                </div>
-              </div>
-
-              {/* Note item 3: Checked */}
-              <div className="flex items-start gap-3">
-                <div className="w-4 h-4 rounded-full bg-purple-500 text-white flex items-center justify-center shrink-0 mt-0.5">
-                  <Check size={10} strokeWidth={3} />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 line-through text-gray-400">
-                    Audit Kecepatan Respons & Efektivitas Staf
-                  </h4>
-                  <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
-                    Semua 13 anggota kantor telah terkalibrasi dengan skor efektivitas dinamis berdasarkan latency, throughput, dan bobot divisi.
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
