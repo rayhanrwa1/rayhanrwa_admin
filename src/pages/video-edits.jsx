@@ -11,11 +11,18 @@ export default function VideoEdits() {
   const [existingThumb, setExistingThumb] = useState('');
   const [existingVideo, setExistingVideo] = useState('');
   const [videoPreview, setVideoPreview] = useState('');
+  const [videoFile, setVideoFile] = useState(null);
+  const [thumbFile, setThumbFile] = useState(null);
+  const [uploadStatusText, setUploadStatusText] = useState('');
   const [formData, setFormData] = useState({
     title: "",
+    title_en: "",
+    title_id: "",
     youtube_url: "",
     video_url: "",
-    thumbnail_url: ""
+    thumbnail_url: "",
+    duration: "00:00:00",
+    order_index: 0
   });
   const [editingId, setEditingId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,49 +52,58 @@ export default function VideoEdits() {
     }
   };
 
-  const handleInputChange = async (e) => {
+  const handleInputChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
       const file = files[0];
       if (!file) return;
-      
-      if (file.type.startsWith('image/')) setThumbPreview(URL.createObjectURL(file));
-      if (file.type.startsWith('video/')) setVideoPreview(URL.createObjectURL(file));
 
-      setIsSubmitting(true);
-      try {
-        const url = await uploadFile(file, file.type.startsWith('video/') ? 'video' : 'image');
-        setFormData(prev => ({ ...prev, [name]: url }));
-      } catch (err) {
-        console.error("Upload failed", err);
-        alert("Upload failed");
-      } finally {
-        setIsSubmitting(false);
+      if (name === 'video_url') {
+        setVideoFile(file);
+        setVideoPreview(URL.createObjectURL(file));
+      } else if (name === 'thumbnail_url') {
+        setThumbFile(file);
+        setThumbPreview(URL.createObjectURL(file));
       }
     } else if (type === 'checkbox') {
-      setFormData({ ...formData, [name]: checked });
+      setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
   const openModal = (item = null) => {
     setThumbPreview('');
     setVideoPreview('');
+    setThumbFile(null);
+    setVideoFile(null);
+    setUploadStatusText('');
     if (item) {
-      let editableData = { ...item };
-      setExistingThumb(item.thumbnail || item.thumbnail_url || item.image_url || item.image || '');
+      setExistingThumb(item.thumbnail_url || item.thumbnail || item.image_url || item.image || '');
       setExistingVideo(item.video_url || item.video || '');
-      setFormData(editableData);
+      setFormData({
+        title: item.title_en || item.title_id || item.title || "",
+        title_en: item.title_en || item.title || "",
+        title_id: item.title_id || item.title || "",
+        youtube_url: item.youtube_url || "",
+        video_url: item.video_url || "",
+        thumbnail_url: item.thumbnail_url || "",
+        duration: item.duration || "00:00:00",
+        order_index: item.order_index ?? 0
+      });
       setEditingId(item.id || item._id);
     } else {
       setExistingThumb('');
       setExistingVideo('');
       setFormData({
         title: "",
+        title_en: "",
+        title_id: "",
         youtube_url: "",
         video_url: "",
-        thumbnail_url: ""
+        thumbnail_url: "",
+        duration: "00:00:00",
+        order_index: 0
       });
       setEditingId(null);
     }
@@ -101,11 +117,18 @@ export default function VideoEdits() {
     setVideoPreview('');
     setExistingThumb('');
     setExistingVideo('');
+    setThumbFile(null);
+    setVideoFile(null);
+    setUploadStatusText('');
     setFormData({
       title: "",
+      title_en: "",
+      title_id: "",
       youtube_url: "",
       video_url: "",
-      thumbnail_url: ""
+      thumbnail_url: "",
+      duration: "00:00:00",
+      order_index: 0
     });
     setEditingId(null);
     setError('');
@@ -115,13 +138,43 @@ export default function VideoEdits() {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
+    setUploadStatusText('');
 
     try {
-      let processedData = { ...formData };
+      let finalVideoUrl = formData.video_url;
+      let finalThumbUrl = formData.thumbnail_url;
 
-      
+      // 1. Upload Video jika ada file video baru yang dipilih
+      if (videoFile) {
+        setUploadStatusText('Mengompresi dan mengunggah video ke server...');
+        finalVideoUrl = await uploadFile(videoFile, 'video');
+      }
 
-      
+      // 2. Upload Thumbnail jika ada gambar baru yang dipilih
+      if (thumbFile) {
+        setUploadStatusText('Mengompresi dan mengunggah thumbnail...');
+        finalThumbUrl = await uploadFile(thumbFile, 'image');
+      }
+
+      if (!finalVideoUrl && !formData.youtube_url) {
+        setError('Mohon upload file video atau masukkan YouTube URL.');
+        setIsSubmitting(false);
+        setUploadStatusText('');
+        return;
+      }
+
+      setUploadStatusText('Menyimpan data video...');
+
+      const titleValue = formData.title || formData.title_en || formData.title_id || 'Untitled Video';
+
+      const processedData = {
+        title_en: formData.title_en || titleValue,
+        title_id: formData.title_id || titleValue,
+        video_url: finalVideoUrl || formData.youtube_url || "",
+        thumbnail_url: finalThumbUrl || null,
+        duration: formData.duration || "00:00:00",
+        order_index: Number(formData.order_index) || 0
+      };
 
       if (editingId) {
         await api.put(`/video_edits/${editingId}`, processedData);
@@ -133,9 +186,11 @@ export default function VideoEdits() {
       fetchItems();
     } catch (err) {
       console.error('Error submitting form', err);
-      setError(err.response?.data?.message || 'Failed to submit form');
+      const msg = err.response?.data?.message || err.message || 'Failed to submit form';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
+      setUploadStatusText('');
     }
   };
 
@@ -209,10 +264,10 @@ export default function VideoEdits() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-900 text-sm">
-                          {item.title || `Video ${item.id || item._id}`}
+                          {item.title_en || item.title_id || item.title || `Video ${item.id || item._id}`}
                         </div>
                         <div className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-md">
-                          {item.youtube_url ? `YouTube: ${item.youtube_url}` : ''}
+                          {item.youtube_url ? `YouTube: ${item.youtube_url}` : item.video_url || ''}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -259,6 +314,13 @@ export default function VideoEdits() {
                 </div>
               )}
 
+              {uploadStatusText && (
+                <div className="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-100 flex items-center gap-3">
+                  <Loader2 className="animate-spin shrink-0" size={18} />
+                  <span>{uploadStatusText}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="col-span-1 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
@@ -267,11 +329,12 @@ export default function VideoEdits() {
                     name="title"
                     value={formData.title || ''}
                     onChange={handleInputChange}
+                    placeholder="Judul video"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">YouTube URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">YouTube URL (Opsional)</label>
                   <input
                     type="text"
                     name="youtube_url"
@@ -282,7 +345,7 @@ export default function VideoEdits() {
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video File</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Video File (MP4, MOV, WebM)</label>
                   {(videoPreview || existingVideo) && (
                     <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
                       <video
@@ -292,7 +355,10 @@ export default function VideoEdits() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-800">
-                          {videoPreview ? 'New Video Selected' : 'Current Loaded Video'}
+                          {videoFile ? `File baru: ${videoFile.name}` : (existingVideo ? 'Video terunggah saat ini' : 'Video dipilih')}
+                        </p>
+                        <p className="text-[11px] text-gray-400">
+                          {videoFile ? 'Akan otomatis dikompres via FFmpeg dan diunggah saat klik simpan.' : 'Pilih file baru jika ingin mengganti.'}
                         </p>
                       </div>
                     </div>
@@ -306,7 +372,7 @@ export default function VideoEdits() {
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thumbnail Image</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Thumbnail Image (Opsional)</label>
                   {(thumbPreview || existingThumb) && (
                     <div className="flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-xl mb-3">
                       <img
@@ -316,9 +382,9 @@ export default function VideoEdits() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-800">
-                          {thumbPreview ? 'New Thumbnail Selected' : 'Current Loaded Thumbnail'}
+                          {thumbFile ? `File baru: ${thumbFile.name}` : 'Thumbnail saat ini'}
                         </p>
-                        <p className="text-[11px] text-gray-400">Pilih file baru di bawah jika ingin mengganti thumbnail.</p>
+                        <p className="text-[11px] text-gray-400">Akan dikompres otomatis dan diunggah ke R2 Cloudflare saat disimpan.</p>
                       </div>
                     </div>
                   )}
@@ -336,7 +402,8 @@ export default function VideoEdits() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -346,7 +413,7 @@ export default function VideoEdits() {
                   className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 font-medium text-sm cursor-pointer"
                 >
                   {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Create'}
+                  {isSubmitting ? (uploadStatusText ? 'Memproses...' : 'Saving...') : (editingId ? 'Save Changes' : 'Create')}
                 </button>
               </div>
             </form>

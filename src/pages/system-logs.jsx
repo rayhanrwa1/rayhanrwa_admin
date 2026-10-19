@@ -151,7 +151,7 @@ export default function SystemLogs() {
             <select
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
-              className="px-3 py-2 text-xs bg-gray-50/70 border border-gray-200 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-gray-400 cursor-pointer"
+              className="px-3 py-2 text-xs bg-gray-50/70 border rounded-lg text-gray-700 font-medium focus:outline-none focus:border-gray-400 cursor-pointer"
             >
               <option value="ALL">All Actions</option>
               <option value="monitoring_check">monitoring_check</option>
