@@ -146,14 +146,22 @@ export default function VideoEdits() {
 
       // 1. Upload Video jika ada file video baru yang dipilih
       if (videoFile) {
-        setUploadStatusText('Mengompresi dan mengunggah video ke server...');
-        finalVideoUrl = await uploadFile(videoFile, 'video');
+        setUploadStatusText('Mengunggah video ke server (0%)...');
+        finalVideoUrl = await uploadFile(videoFile, (pct) => {
+          if (pct < 100) {
+            setUploadStatusText(`Mengunggah video ke server (${pct}%)...`);
+          } else {
+            setUploadStatusText('Video terunggah, sedang memproses kompresi server & menyimpan ke R2...');
+          }
+        });
       }
 
       // 2. Upload Thumbnail jika ada gambar baru yang dipilih
       if (thumbFile) {
-        setUploadStatusText('Mengompresi dan mengunggah thumbnail...');
-        finalThumbUrl = await uploadFile(thumbFile, 'image');
+        setUploadStatusText('Mengunggah thumbnail...');
+        finalThumbUrl = await uploadFile(thumbFile, (pct) => {
+          setUploadStatusText(`Mengunggah thumbnail (${pct}%)...`);
+        });
       }
 
       if (!finalVideoUrl && !formData.youtube_url) {

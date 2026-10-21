@@ -1,7 +1,7 @@
 import api from './api';
 import imageCompression from 'browser-image-compression';
 
-export const uploadFile = async (file) => {
+export const uploadFile = async (file, onProgress = null) => {
   if (!file) return null;
 
   let fileToUpload = file;
@@ -30,7 +30,14 @@ export const uploadFile = async (file) => {
   uploadForm.append('file', fileToUpload);
 
   const uploadRes = await api.post('/upload', uploadForm, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 600000, // 10 menit agar tidak timeout pada file besar
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percent);
+      }
+    }
   });
 
   return uploadRes.data.url || uploadRes.data?.data?.url;
