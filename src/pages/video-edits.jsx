@@ -52,7 +52,7 @@ export default function VideoEdits() {
     }
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const { name, value, type, checked, files } = e.target;
     if (type === 'file') {
       const file = files[0];
@@ -61,9 +61,45 @@ export default function VideoEdits() {
       if (name === 'video_url') {
         setVideoFile(file);
         setVideoPreview(URL.createObjectURL(file));
+        setIsSubmitting(true);
+        setError('');
+        setUploadStatusText('Mengunggah video ke server & Cloudflare R2 (0%)...');
+        try {
+          const url = await uploadFile(file, (pct) => {
+            if (pct < 100) {
+              setUploadStatusText(`Mengunggah video ke server (${pct}%)...`);
+            } else {
+              setUploadStatusText('Sedang kompresi video & menyimpan ke R2 bucket...');
+            }
+          });
+          setFormData(prev => ({ ...prev, video_url: url }));
+          setUploadStatusText('Video berhasil diunggah ke R2!');
+          setTimeout(() => setUploadStatusText(''), 3000);
+        } catch (err) {
+          console.error('Upload video failed:', err);
+          setError(err.response?.data?.message || err.message || 'Gagal mengunggah video');
+        } finally {
+          setIsSubmitting(false);
+        }
       } else if (name === 'thumbnail_url') {
         setThumbFile(file);
         setThumbPreview(URL.createObjectURL(file));
+        setIsSubmitting(true);
+        setError('');
+        setUploadStatusText('Mengompresi & mengunggah thumbnail ke R2...');
+        try {
+          const url = await uploadFile(file, (pct) => {
+            setUploadStatusText(`Mengunggah thumbnail (${pct}%)...`);
+          });
+          setFormData(prev => ({ ...prev, thumbnail_url: url }));
+          setUploadStatusText('Thumbnail berhasil diunggah ke R2!');
+          setTimeout(() => setUploadStatusText(''), 3000);
+        } catch (err) {
+          console.error('Upload thumbnail failed:', err);
+          setError(err.response?.data?.message || err.message || 'Gagal mengunggah thumbnail');
+        } finally {
+          setIsSubmitting(false);
+        }
       }
     } else if (type === 'checkbox') {
       setFormData(prev => ({ ...prev, [name]: checked }));
@@ -86,8 +122,8 @@ export default function VideoEdits() {
         title_en: item.title_en || item.title || "",
         title_id: item.title_id || item.title || "",
         youtube_url: item.youtube_url || "",
-        video_url: item.video_url || "",
-        thumbnail_url: item.thumbnail_url || "",
+        video_url: item.video_url || item.video || "",
+        thumbnail_url: item.thumbnail_url || item.thumbnail || "",
         duration: item.duration || "00:00:00",
         order_index: item.order_index ?? 0
       });
@@ -138,48 +174,21 @@ export default function VideoEdits() {
     e.preventDefault();
     setIsSubmitting(true);
     setError('');
-    setUploadStatusText('');
 
     try {
-      let finalVideoUrl = formData.video_url;
-      let finalThumbUrl = formData.thumbnail_url;
-
-      // 1. Upload Video jika ada file video baru yang dipilih
-      if (videoFile) {
-        setUploadStatusText('Mengunggah video ke server (0%)...');
-        finalVideoUrl = await uploadFile(videoFile, (pct) => {
-          if (pct < 100) {
-            setUploadStatusText(`Mengunggah video ke server (${pct}%)...`);
-          } else {
-            setUploadStatusText('Video terunggah, sedang memproses kompresi server & menyimpan ke R2...');
-          }
-        });
-      }
-
-      // 2. Upload Thumbnail jika ada gambar baru yang dipilih
-      if (thumbFile) {
-        setUploadStatusText('Mengunggah thumbnail...');
-        finalThumbUrl = await uploadFile(thumbFile, (pct) => {
-          setUploadStatusText(`Mengunggah thumbnail (${pct}%)...`);
-        });
-      }
-
-      if (!finalVideoUrl && !formData.youtube_url) {
-        setError('Mohon upload file video atau masukkan YouTube URL.');
+      if (!formData.video_url && !formData.youtube_url) {
+        setError('Mohon upload file video terlebih dahulu atau masukkan YouTube URL.');
         setIsSubmitting(false);
-        setUploadStatusText('');
         return;
       }
-
-      setUploadStatusText('Menyimpan data video...');
 
       const titleValue = formData.title || formData.title_en || formData.title_id || 'Untitled Video';
 
       const processedData = {
         title_en: formData.title_en || titleValue,
         title_id: formData.title_id || titleValue,
-        video_url: finalVideoUrl || formData.youtube_url || "",
-        thumbnail_url: finalThumbUrl || null,
+        video_url: formData.video_url || formData.youtube_url || "",
+        thumbnail_url: formData.thumbnail_url || null,
         duration: formData.duration || "00:00:00",
         order_index: Number(formData.order_index) || 0
       };
@@ -198,7 +207,6 @@ export default function VideoEdits() {
       setError(msg);
     } finally {
       setIsSubmitting(false);
-      setUploadStatusText('');
     }
   };
 
@@ -366,7 +374,7 @@ export default function VideoEdits() {
                           {videoFile ? `File baru: ${videoFile.name}` : (existingVideo ? 'Video terunggah saat ini' : 'Video dipilih')}
                         </p>
                         <p className="text-[11px] text-gray-400">
-                          {videoFile ? 'Akan otomatis dikompres via FFmpeg dan diunggah saat klik simpan.' : 'Pilih file baru jika ingin mengganti.'}
+                          {formData.video_url?.startsWith('http') && !videoFile ? 'Video tersimpan di storage R2.' : (videoFile ? 'Video otomatis dikompres via FFmpeg & diunggah ke R2.' : 'Pilih file baru jika ingin mengganti.')}
                         </p>
                       </div>
                     </div>
@@ -375,8 +383,9 @@ export default function VideoEdits() {
                     type="file"
                     name="video_url"
                     accept="video/*"
+                    disabled={isSubmitting}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer disabled:opacity-50"
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
@@ -392,7 +401,9 @@ export default function VideoEdits() {
                         <p className="text-xs font-semibold text-gray-800">
                           {thumbFile ? `File baru: ${thumbFile.name}` : 'Thumbnail saat ini'}
                         </p>
-                        <p className="text-[11px] text-gray-400">Akan dikompres otomatis dan diunggah ke R2 Cloudflare saat disimpan.</p>
+                        <p className="text-[11px] text-gray-400">
+                          {formData.thumbnail_url?.startsWith('http') && !thumbFile ? 'Thumbnail tersimpan di storage R2.' : 'Otomatis dikompresi & diunggah ke Cloudflare R2.'}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -400,8 +411,9 @@ export default function VideoEdits() {
                     type="file"
                     name="thumbnail_url"
                     accept="image/*"
+                    disabled={isSubmitting}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer"
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all text-sm cursor-pointer disabled:opacity-50"
                   />
                 </div>
               </div>
