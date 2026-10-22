@@ -77,7 +77,8 @@ export default function VideoEdits() {
           setTimeout(() => setUploadStatusText(''), 3000);
         } catch (err) {
           console.error('Upload video failed:', err);
-          setError(err.response?.data?.message || err.message || 'Gagal mengunggah video');
+          const backendDetail = err.response?.data?.data ? ` (${err.response.data.data})` : '';
+          setError((err.response?.data?.message || err.message || 'Gagal mengunggah video') + backendDetail);
         } finally {
           setIsSubmitting(false);
         }
