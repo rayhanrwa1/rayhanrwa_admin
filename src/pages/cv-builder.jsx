@@ -95,7 +95,7 @@ function Input({ label, value, onChange, placeholder = '', type = 'text' }) {
         value={value || ''}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -110,7 +110,7 @@ function TextArea({ label, value, onChange, placeholder = '', rows = 3 }) {
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -181,7 +181,7 @@ function ResumePreview({ resume, fontSize }) {
     experience: resume.experience?.some((item) => item.role || item.company) && (
       <PreviewSection key="experience" title="Professional Experience" template={template}>
         {resume.experience.filter((item) => item.role || item.company).map((item, index) => (
-          <div key={`experience-${index}`} className="mb-2.5 break-inside-avoid last:mb-0">
+          <div key={`experience-${index}`} className="mb-2.5 break-inside-avoid">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4">
               <strong className="cv-entry-title">{template === 'ats_academic' ? item.role || item.company : item.company || item.role}</strong>
               <span className="cv-small-text text-gray-600">{dateRange(item.start_date, item.end_date)}</span>
@@ -192,7 +192,7 @@ function ResumePreview({ resume, fontSize }) {
               </p>
             )}
             {item.description?.filter(Boolean).length > 0 && (
-              <ul className="mt-0.5 list-disc space-y-0 pl-4 leading-[1.25]">
+              <ul className="mt-0.5 list-disc space-y-0 pl-4 leading-tight">
                 {item.description.filter(Boolean).map((line, lineIndex) => <li key={`exp-line-${lineIndex}`}>{line}</li>)}
               </ul>
             )}
@@ -203,7 +203,7 @@ function ResumePreview({ resume, fontSize }) {
     education: resume.education?.some((item) => item.degree || item.institution) && (
       <PreviewSection key="education" title="Education" template={template}>
         {resume.education.filter((item) => item.degree || item.institution).map((item, index) => (
-          <div key={`education-${index}`} className="mb-2 break-inside-avoid last:mb-0">
+          <div key={`education-${index}`} className="mb-2 break-inside-avoid">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4">
               <strong className="cv-entry-title">{item.degree}</strong>
               <span className="cv-small-text text-gray-600">{dateRange(item.start_date, item.end_date)}</span>
@@ -222,10 +222,10 @@ function ResumePreview({ resume, fontSize }) {
     projects: resume.projects?.some((item) => item.name) && (
       <PreviewSection key="projects" title="Selected Projects" template={template}>
         {resume.projects.filter((item) => item.name).map((item, index) => (
-          <div key={`project-${index}`} className="mb-2 break-inside-avoid last:mb-0">
+          <div key={`project-${index}`} className="mb-2 break-inside-avoid">
             <strong className="cv-entry-title">{item.name}</strong>
             {item.link && <p className="break-all cv-small-text text-gray-600">{item.link}</p>}
-            {item.description?.filter(Boolean).length > 0 && <ul className="mt-0.5 list-disc space-y-0 pl-4 leading-[1.25]">{item.description.filter(Boolean).map((line, lineIndex) => <li key={`project-line-${lineIndex}`}>{line}</li>)}</ul>}
+            {item.description?.filter(Boolean).length > 0 && <ul className="mt-0.5 list-disc space-y-0 pl-4 leading-tight">{item.description.filter(Boolean).map((line, lineIndex) => <li key={`project-line-${lineIndex}`}>{line}</li>)}</ul>}
           </div>
         ))}
       </PreviewSection>
@@ -233,7 +233,7 @@ function ResumePreview({ resume, fontSize }) {
     certifications: resume.certifications?.some((item) => item.name) && (
       <PreviewSection key="certifications" title="Certifications" template={template}>
         {resume.certifications.filter((item) => item.name).map((item, index) => (
-          <div key={`certification-${index}`} className="mb-2 break-inside-avoid last:mb-0">
+          <div key={`certification-${index}`} className="mb-2 break-inside-avoid">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4">
               <strong>{item.name}</strong>
               <span className="cv-small-text text-gray-600">{item.date}</span>
@@ -272,17 +272,17 @@ function ResumePreview({ resume, fontSize }) {
 
   return (
     <article
-      className={`cv-print-area cv-body-text mx-auto bg-white px-6 py-7 leading-[1.25] text-gray-800 sm:px-9 sm:py-9 ${template === 'ats_academic' || template === 'ats_executive' ? 'font-serif' : ''}`}
+      className={`cv-print-area cv-body-text mx-auto bg-white px-6 py-7 leading-tight text-gray-800 sm:px-9 sm:py-9 ${template === 'ats_academic' || template === 'ats_executive' ? 'font-serif' : ''}`}
       style={pageStyle}
     >
       <header className={`break-inside-avoid ${headerStyle}`}>
         <div className={`flex items-start justify-between gap-3 ${template === 'ats_executive' || template === 'ats_academic' ? 'flex-col items-center' : ''}`}>
           <div className={`${template === 'ats_executive' || template === 'ats_academic' ? 'text-center' : ''} min-w-0`}>
-            <h1 className={`cv-name break-words ${nameStyle}`}>{resume.full_name || 'Nama Lengkap'}</h1>
+            <h1 className={`cv-name wrap-break-word ${nameStyle}`}>{resume.full_name || 'Nama Lengkap'}</h1>
             {resume.headline && <p className="mt-0.5 text-base font-medium">{resume.headline}</p>}
           </div>
           {contact.length > 0 && (
-            <div className={`cv-small-text break-words leading-tight text-gray-700 ${template === 'ats_executive' || template === 'ats_academic' ? 'text-center' : 'max-w-[48%] shrink-0 text-right'}`}>
+            <div className={`cv-small-text wrap-break-word leading-tight text-gray-700 ${template === 'ats_executive' || template === 'ats_academic' ? 'text-center' : 'max-w-[48%] shrink-0 text-right'}`}>
               {template === 'ats_classic' || template === 'ats_minimal' || template === 'ats_technical'
                 ? <p>{contact.join(' · ')}</p>
                 : contact.map((detail) => <p key={detail}>{detail}</p>)}
@@ -424,7 +424,7 @@ function TemplateSamples({ selectedTemplate, onSelect }) {
               aria-pressed={selectedTemplate === template.id}
               className={`rounded-md border p-2 text-left transition-colors ${selectedTemplate === template.id ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'}`}
             >
-              <div className={`mx-auto aspect-[210/297] w-full max-w-48 overflow-hidden border border-gray-300 bg-white p-2.5 text-[6px] leading-[1.2] text-gray-700 ${template.id === 'ats_executive' || template.id === 'ats_academic' ? 'font-serif' : ''}`}>
+              <div className={`mx-auto aspect-210/297 w-full max-w-48 overflow-hidden border border-gray-300 bg-white p-2.5 text-[6px] leading-[1.2] text-gray-700 ${template.id === 'ats_executive' || template.id === 'ats_academic' ? 'font-serif' : ''}`}>
                 <header className={headerClass}>
                   <div className={`flex items-start justify-between gap-2 ${centeredHeader ? 'flex-col items-center' : ''}`}>
                     <div>
@@ -725,7 +725,7 @@ export default function CVBuilder() {
                   <Input label="Posisi yang dituju (opsional)" value={targetRole} onChange={setTargetRole} placeholder="Contoh: Senior Backend Engineer" />
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-gray-700">Bahasa draf</span>
-                    <select value={draftLanguage} onChange={(event) => setDraftLanguage(event.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    <select value={draftLanguage} onChange={(event) => setDraftLanguage(event.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100">
                       <option value="id">Bahasa Indonesia</option>
                       <option value="en">English</option>
                     </select>
@@ -788,7 +788,7 @@ export default function CVBuilder() {
                 <select
                   value={resume.font_family}
                   onChange={(event) => setValue('font_family', event.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
                 >
                   {fonts.map((font) => <option key={font.id} value={font.id}>{font.name}</option>)}
                 </select>

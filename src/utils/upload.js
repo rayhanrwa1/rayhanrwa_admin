@@ -10,9 +10,11 @@ export const uploadFile = async (file, onProgress = null) => {
   if (file.type.startsWith('image/') && !file.type.includes('svg') && !file.type.includes('gif')) {
     try {
       const options = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
+        maxSizeMB: 0.3, // Target ukuran kompresi sekitar 200 - 300 KB
+        maxWidthOrHeight: 1920, // Tetap tajam Full HD
         useWebWorker: true,
+        fileType: 'image/webp', // WebP menghasilkan ukuran jauh lebih kecil dengan visual lossless
+        initialQuality: 0.85, // Kualitas visual prima (85%)
       };
       const compressedFile = await imageCompression(file, options);
       // Fallback to original if compressed is somehow larger

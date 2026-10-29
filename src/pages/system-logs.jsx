@@ -122,7 +122,7 @@ export default function SystemLogs() {
               placeholder="Search logs by agent name, summary, endpoint, or action..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs bg-gray-50/70 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 transition"
+              className="w-full pl-10 pr-4 py-2 text-xs bg-gray-50/70 border border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition"
             />
           </div>
 
@@ -135,7 +135,7 @@ export default function SystemLogs() {
             <select
               value={selectedDivision}
               onChange={(e) => setSelectedDivision(e.target.value)}
-              className="px-3 py-2 text-xs bg-gray-50/70 border border-gray-200 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-gray-400 cursor-pointer"
+              className="px-3 py-2 text-xs bg-gray-50/70 border rounded-lg text-gray-700 font-medium focus:outline-none focus:border-gray-400 cursor-pointer"
             >
               <option value="ALL">All Divisions</option>
               <option value="IT">IT Division</option>
@@ -167,7 +167,7 @@ export default function SystemLogs() {
             <select
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
-              className="px-3 py-2 text-xs bg-gray-50/70 border border-gray-200 rounded-lg text-gray-700 font-medium focus:outline-none focus:border-gray-400 cursor-pointer"
+              className="px-3 py-2 text-xs bg-gray-50/70 border border-gray-200 rounded-lg text-gray-700 font-medium focus:outline-none cursor-pointer"
             >
               <option value={50}>50</option>
               <option value={100}>100</option>
@@ -247,7 +247,7 @@ export default function SystemLogs() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-gray-700 font-medium max-w-md">
-                          <div className="truncate group-hover:whitespace-normal group-hover:break-words transition-all duration-200">
+                          <div className="truncate group-hover:whitespace-normal group-hover:wrap-break-word transition-all duration-200">
                             {log.summary}
                           </div>
                         </td>

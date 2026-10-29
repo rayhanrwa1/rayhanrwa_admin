@@ -101,6 +101,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         { name: 'Integrations', path: '/integrations', icon: <Link2 size={18} /> },
         { name: 'AI Characters', path: '/ai-characters', icon: <Users size={18} /> },
         { name: 'AI Monitoring', path: '/ai-monitoring', icon: <Activity size={18} /> },
+        { name: 'AI API Keys', path: '/api-keys', icon: <Key size={18} /> },
         { name: 'System Logs', path: '/system-logs', icon: <Terminal size={18} /> }
       ]
     },

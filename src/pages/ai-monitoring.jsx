@@ -396,7 +396,7 @@ export default function AIMonitoring() {
 
                   {/* Col 2: Assignee (Avatar + Name) */}
                   <div className="col-span-3 flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-gray-800 to-gray-600 text-white font-bold text-[10px] flex items-center justify-center border border-white shadow-2xs">
+                    <div className="w-6 h-6 rounded-full bg-linear-to-tr from-gray-800 to-gray-600 text-white font-bold text-[10px] flex items-center justify-center border border-white shadow-2xs">
                       {person.name.charAt(0)}
                     </div>
                     <div>
